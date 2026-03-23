@@ -1,0 +1,14 @@
+[color]
+	ui = auto
+[core]
+	quotepath = false
+	trustctime = false
+[diff]
+	renames = copies
+	mnemonicprefix = true
+[log]
+	date = local
+[rerere]
+	enabled = 1
+[init]
+	defaultBranch = master

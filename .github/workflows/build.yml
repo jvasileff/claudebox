@@ -1,0 +1,56 @@
+name: Build and push image
+
+on:
+  push:
+    branches: [master]
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/claudebox
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            platform: amd64
+          - runner: ubuntu-24.04-arm
+            platform: arm64
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        run: |
+          docker build -f Dockerfile -t $IMAGE:latest-${{ matrix.platform }} context
+          docker push $IMAGE:latest-${{ matrix.platform }}
+
+  manifest:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push manifest
+        run: |
+          docker buildx imagetools create \
+            -t $IMAGE:latest \
+            $IMAGE:latest-amd64 \
+            $IMAGE:latest-arm64

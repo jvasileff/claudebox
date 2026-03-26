@@ -32,6 +32,9 @@ log_error() { _log "1;31" "ERROR"   "$@"; }
 # CODESPACES env var is the canonical check, but during docker start it
 # may not be injected yet (devcontainer CLI injects it later). We also
 # check for the /workspaces/.codespaces directory as a file marker.
+# Note: /workspaces/.codespaces is a Codespaces platform directory used
+# for persistent storage; it's not officially documented as stable but
+# is referenced in devcontainer CLI args (--container-session-data-folder).
 is_codespaces() {
     [ "${CODESPACES:-}" = "true" ] || [ -d "/workspaces/.codespaces" ]
 }

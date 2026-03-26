@@ -12,12 +12,6 @@ Minimal Docker sandbox for running Claude Code with network isolation.
   run the firewall setup script
 - If the firewall fails to initialize, the container refuses to start
 
-## Build
-
-```bash
-docker build -f Dockerfile -t claudebox context
-```
-
 ## Run
 
 ```bash
@@ -29,7 +23,13 @@ docker run -it --rm \
     --cap-add=SETGID \
     --cap-add=AUDIT_WRITE \
     -v "$(pwd):/workspaces/project" \
-    claudebox
+    ghcr.io/jvasileff/claudebox:latest
+```
+
+### Build from source
+
+```bash
+docker build -f Dockerfile -t claudebox context
 ```
 
 ### What the flags do
@@ -66,7 +66,7 @@ claudebox() {
         "${_env_args[@]}" \
         -v "$_vol:/home/coder/.claude" \
         -v "$_real:/workspaces/project" \
-        claudebox "$@"
+        ghcr.io/jvasileff/claudebox:latest "$@"
 }
 ```
 

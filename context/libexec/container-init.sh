@@ -37,10 +37,20 @@ is_codespaces() {
 # succeeds and blocks Codespaces' internal communication (causing a hang).
 # The firewall protects against local-network threats that don't apply in
 # Codespaces (no LAN, no Docker host, no local metadata endpoint).
+#
+# Outside Codespaces, the firewall is mandatory. If iptables fails
+# (e.g. missing NET_ADMIN), the script exits non-zero so the container
+# doesn't run Claude Code without network isolation. Use `docker run`
+# with --cap-drop=ALL --cap-add=NET_ADMIN --cap-add=NET_RAW ... flags.
 if is_codespaces; then
     log_info "Codespaces detected — skipping firewall setup (not needed here)"
 else
-    sudo /usr/local/libexec/init-firewall.sh
+    if ! sudo /usr/local/libexec/init-firewall.sh; then
+        log_error "firewall setup failed — NET_ADMIN capability is required"
+        log_error "use 'docker run --cap-drop=ALL --cap-add=NET_ADMIN --cap-add=NET_RAW ...'"
+        log_error "see README.md for the full docker run command"
+        exit 1
+    fi
 fi
 
 # -- Git config -------------------------------------------------------

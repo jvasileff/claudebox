@@ -1,9 +1,6 @@
 #
 # This file MUST be edited with the 'visudo' command as root.
 #
-# Please consider adding local content in /etc/sudoers.d/ instead of
-# directly modifying this file.
-#
 # See the man page for details on how to write a sudoers file.
 #
 Defaults    env_reset
@@ -14,17 +11,8 @@ Defaults    secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin
 # (#1011624, https://bugs.kde.org/show_bug.cgi?id=452532)
 Defaults    use_pty
 
-# Standard root privilege (root already has full access; this allows
-# tools that unconditionally invoke sudo to work when run as root,
-# which is needed for Codespaces container initialization)
-root ALL=(ALL:ALL) ALL
-
 # Cmnd alias specification
 Cmnd_Alias FIREWALL = /usr/local/libexec/init-firewall.sh
 
 # User privilege specification — coder may ONLY run the firewall script
 coder ALL=(root) NOPASSWD: FIREWALL
-
-# Allow drop-in files from /etc/sudoers.d (used by Codespaces and
-# devcontainer features to inject platform-specific rules)
-@includedir /etc/sudoers.d

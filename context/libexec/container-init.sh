@@ -5,10 +5,10 @@ set -euo pipefail
 # If any step fails, the container dies - there is no state where
 # Claude Code runs without a working firewall.
 #
-# Exception: in Codespaces, the firewall is skipped entirely. Codespaces
-# silently grants NET_ADMIN, so iptables succeeds but then blocks
-# Codespaces' internal communication, causing the container to hang.
-# A Codespaces-specific firewall ruleset may be possible (see TODO.md).
+# Exception: in Codespaces, the firewall is skipped entirely because the
+# standard ruleset blocks Codespaces' internal communication, causing
+# the container to hang. A Codespaces-specific ruleset may be possible
+# (see TODO.md).
 
 # -- Logging helpers (color on tty, plain text otherwise) -------------
 _log() {
@@ -24,11 +24,8 @@ log_warn()  { _log "1;33" "WARNING" "$@"; }
 log_error() { _log "1;31" "ERROR"   "$@"; }
 
 # -- Detect Codespaces ------------------------------------------------
-# The CODESPACES env var is available during postStartCommand. The
-# /workspaces/.codespaces directory check is a belt-and-suspenders
-# fallback in case the env var is unavailable in some execution context.
 is_codespaces() {
-    [ "${CODESPACES:-}" = "true" ] || [ -d "/workspaces/.codespaces" ]
+    [ "${CODESPACES:-}" = "true" ]
 }
 
 # -- Firewall setup ---------------------------------------------------

@@ -143,13 +143,9 @@ directory and the symlink is recreated automatically on each container start.
 
 The sandbox can run as a GitHub Codespace using the same devcontainer
 configurations. However, **the iptables firewall is currently skipped
-in Codespaces**. Codespaces silently grants `NET_ADMIN`, so iptables
-rules succeed but then block Codespaces' internal communication,
-causing the container to hang. The container detects Codespaces and
-skips the firewall to avoid this.
-
-All other sandbox features work normally: unprivileged user, SUID/SGID
-stripping, scoped sudo, Java version selection, memory sync.
+in Codespaces** because the standard ruleset blocks Codespaces' internal
+communication, causing the container to hang. The container detects
+Codespaces and skips the firewall to avoid this.
 
 ### Limitations
 

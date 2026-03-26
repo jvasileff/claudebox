@@ -2,13 +2,14 @@
 set -euo pipefail
 
 # -- This script runs as coder ----------------------------------------
-# Outside of Codespaces: if the firewall fails, the container dies —
-# there is no state where Claude Code runs without network isolation.
-# In Codespaces: the firewall is skipped entirely. Codespaces does not
-# reliably block NET_ADMIN, so if the capability is silently granted,
-# iptables would succeed and block internal communication (causing a
-# hang). The firewall is unnecessary in Codespaces anyway — there's no
-# local LAN, Docker host, or metadata endpoint to protect against.
+# If any step fails, the container dies - there is no state where
+# Claude Code runs without a working firewall.
+#
+# Exception: in Codespaces, the firewall is skipped entirely. Codespaces
+# does not reliably block NET_ADMIN, so if the capability is silently
+# granted, iptables would succeed and block internal communication
+# (causing a hang). The firewall is unnecessary in Codespaces anyway —
+# there's no local LAN, Docker host, or metadata endpoint to protect.
 
 # -- Logging helpers (color on tty, plain text otherwise) -------------
 _log() {
@@ -32,29 +33,15 @@ is_codespaces() {
 }
 
 # -- Firewall setup ---------------------------------------------------
-# In Codespaces, skip the firewall entirely. Codespaces does not reliably
-# block NET_ADMIN — if the capability is silently granted, iptables
-# succeeds and blocks Codespaces' internal communication (causing a hang).
-# The firewall protects against local-network threats that don't apply in
-# Codespaces (no LAN, no Docker host, no local metadata endpoint).
-#
-# Outside Codespaces, the firewall is mandatory. If iptables fails
-# (e.g. missing NET_ADMIN), the script exits non-zero so the container
-# doesn't run Claude Code without network isolation. Use `docker run`
-# with --cap-drop=ALL --cap-add=NET_ADMIN --cap-add=NET_RAW ... flags.
-log_info "CODESPACES=${CODESPACES:-<unset>} /workspaces/.codespaces exists=$([ -d /workspaces/.codespaces ] && echo yes || echo no)"
 if is_codespaces; then
     log_info "Codespaces detected — skipping firewall setup (not needed here)"
 else
-    if ! sudo /usr/local/libexec/init-firewall.sh; then
-        log_error "firewall setup failed — NET_ADMIN capability is required"
-        log_error "use 'docker run --cap-drop=ALL --cap-add=NET_ADMIN --cap-add=NET_RAW ...'"
-        log_error "see README.md for the full docker run command"
-        exit 1
-    fi
+    sudo /usr/local/libexec/init-firewall.sh
 fi
 
 # -- Git config -------------------------------------------------------
+# In a dev container, VS Code injects its own .gitconfig (host credentials,
+# signing config, etc). Only install our default when not in that context.
 if [ -z "${DEVCONTAINER:-}" ] && [ ! -f "$HOME/.gitconfig" ]; then
     cp /etc/skel/.gitconfig "$HOME/.gitconfig"
 fi

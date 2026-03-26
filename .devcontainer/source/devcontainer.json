@@ -1,6 +1,8 @@
 {
     "name": "Claude Code Sandbox (source)",
     "remoteUser": "coder",
+    "workspaceFolder": "/workspaces/project",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/project,type=bind",
     "mounts": [
         "source=claude-code-${devcontainerId},target=/home/coder/.claude,type=volume"
     ],
@@ -11,8 +13,6 @@
         "--cap-add=SETGID",
         "--cap-add=AUDIT_WRITE"
     ],
-    "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/project,type=bind,consistency=cached",
-    "workspaceFolder": "/workspaces/project",
     "remoteEnv": {
         "DEVCONTAINER": "1"
     },

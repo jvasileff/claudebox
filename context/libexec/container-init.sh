@@ -1,5 +1,10 @@
 #!/bin/bash
-set -euo pipefail
+set -euxo pipefail
+
+echo "=== [container-init.sh] Starting ==="
+echo "=== [container-init.sh] whoami=$(whoami) uid=$(id -u) gid=$(id -g) ==="
+echo "=== [container-init.sh] HOME=$HOME PWD=$PWD ==="
+echo "=== [container-init.sh] CODESPACES=${CODESPACES:-unset} DEVCONTAINER=${DEVCONTAINER:-unset} ==="
 
 # -- This script runs as coder ----------------------------------------
 # Outside of Codespaces: if the firewall fails, the container dies —
@@ -20,11 +25,9 @@ log_warn()  { _log "1;33" "WARNING" "$@"; }
 log_error() { _log "1;31" "ERROR"   "$@"; }
 
 # -- Firewall setup ---------------------------------------------------
-# In Codespaces, NET_ADMIN capability is not granted, so iptables will
-# fail. The Codespaces environment provides its own isolation (cloud VM,
-# no local network), so we log a warning and continue. Everywhere else
-# (docker run, VS Code devcontainer) the firewall is mandatory.
+echo "=== [container-init.sh] Firewall setup ==="
 if [ "${CODESPACES:-}" = "true" ]; then
+    echo "=== [container-init.sh] Codespaces detected, firewall is best-effort ==="
     if sudo /usr/local/libexec/init-firewall.sh 2>/dev/null; then
         log_info "firewall initialized"
     else
@@ -32,31 +35,34 @@ if [ "${CODESPACES:-}" = "true" ]; then
         log_warn "network isolation is NOT active — this is expected in Codespaces"
     fi
 else
+    echo "=== [container-init.sh] Non-Codespaces, firewall is mandatory ==="
     sudo /usr/local/libexec/init-firewall.sh
 fi
+echo "=== [container-init.sh] Firewall setup done ==="
 
 # -- Git config -------------------------------------------------------
-# In a dev container, VS Code injects its own .gitconfig (host credentials,
-# signing config, etc). Only install our default when not in that context.
+echo "=== [container-init.sh] Git config ==="
 if [ -z "${DEVCONTAINER:-}" ] && [ ! -f "$HOME/.gitconfig" ]; then
     cp /etc/skel/.gitconfig "$HOME/.gitconfig"
 fi
 
-# -- Java version selection -------------------------------------------
-JAVA_VERSION_FILE="/workspaces/project/.java-version"
-if [ -f "$JAVA_VERSION_FILE" ]; then
-    JAVA_MAJOR=$(tr -d '[:space:]' < "$JAVA_VERSION_FILE")
-    set +u
-    BEST=$(sdk list java | grep '| installed' | grep -oE "[0-9]+\.[0-9]+\.[0-9]+-[a-z]+" | grep "^${JAVA_MAJOR}\." | sort -V | tail -1 || true)
-    if [ -n "$BEST" ]; then
-        sdk default java "$BEST" > /dev/null
-    else
-        log_warn "Java $JAVA_MAJOR requested in .java-version but not installed; using image default"
-    fi
-    set -u
-fi
+# -- Java version selection (skipped — SDKs not installed) ------------
+echo "=== [container-init.sh] Skipping Java version selection (SDKs not installed) ==="
+# JAVA_VERSION_FILE="/workspaces/project/.java-version"
+# if [ -f "$JAVA_VERSION_FILE" ]; then
+#     JAVA_MAJOR=$(tr -d '[:space:]' < "$JAVA_VERSION_FILE")
+#     set +u
+#     BEST=$(sdk list java | grep '| installed' | grep -oE "[0-9]+\.[0-9]+\.[0-9]+-[a-z]+" | grep "^${JAVA_MAJOR}\." | sort -V | tail -1 || true)
+#     if [ -n "$BEST" ]; then
+#         sdk default java "$BEST" > /dev/null
+#     else
+#         log_warn "Java $JAVA_MAJOR requested in .java-version but not installed; using image default"
+#     fi
+#     set -u
+# fi
 
 # -- Memory sync symlink ----------------------------------------------
+echo "=== [container-init.sh] Memory sync symlink ==="
 MEMORY_SYNC="/workspaces/project/.claude/memory-sync"
 MEMORY_DIR="/home/coder/.claude/projects/-workspaces-project/memory"
 
@@ -74,3 +80,5 @@ if [ -d "$MEMORY_SYNC" ]; then
 else
     log_info "memory sync not configured; run claudebox-memory-init to enable"
 fi
+
+echo "=== [container-init.sh] Complete ==="

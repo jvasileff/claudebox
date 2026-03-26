@@ -1,6 +1,6 @@
 FROM debian:trixie-slim
 
-ARG CACHE_BUSTER=2026-03-26p
+ARG CACHE_BUSTER=2026-03-25
 
 # -- Install runtime dependencies -------------------------------------
 # sudo:               scoped privilege escalation for firewall setup only
@@ -32,49 +32,42 @@ RUN groupadd -g 1000 coder \
     && mkdir -p /home/coder/.claude \
     && chown coder:coder /home/coder/.claude
 
-## -- Heavy installs commented out for Codespaces boot testing --------
-## Uncomment these once Codespaces debugging is complete.
-#
-# # -- Install nvm (Node version manager, for project use) --------------
-# RUN su - coder -c "curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | PROFILE=/dev/null bash"
-#
-# # -- Install Node.js LTS via nvm --------------------------------------
-# RUN su - coder -c ". ~/.nvm/nvm.sh && nvm install --lts && nvm alias default node"
-#
-# # -- Install sdkman ---------------------------------------------------
-# RUN su - coder -c "curl -fsSL 'https://get.sdkman.io?rcupdate=false' | bash"
-#
-# # -- Install SDKs (last java install becomes the default) -------------
-# RUN su - coder -c ". ~/.sdkman/bin/sdkman-init.sh && \
-#     sdk install java \$(sdk list java | grep -oE '[0-9]+\.[0-9]+\.[0-9]+-amzn' | grep '^8\.' | sort -V | tail -1) && \
-#     sdk install java \$(sdk list java | grep -oE '[0-9]+\.[0-9]+\.[0-9]+-graalce' | grep '^17\.' | sort -V | tail -1) && \
-#     sdk install java \$(sdk list java | grep -oE '[0-9]+\.[0-9]+\.[0-9]+-graalce' | grep '^21\.' | sort -V | tail -1) && \
-#     sdk install java \$(sdk list java | grep -oE '[0-9]+\.[0-9]+\.[0-9]+-graalce' | grep '^25\.' | sort -V | tail -1) && \
-#     sdk install gradle && \
-#     sdk install maven && \
-#     sdk install jbang && \
-#     sdk flush"
-#
-# # -- Install uv (Python package/version manager) ----------------------
-# RUN su - coder -c "curl -LsSf https://astral.sh/uv/install.sh | sh"
-#
-# # -- Install Python via uv (pre-bake to avoid on-demand download) -----
-# RUN su - coder -c "uv python install"
-#
-# # -- Python wrapper scripts (shim pip/pip3/python/python3 → uv) -------
-# RUN mkdir -p /home/coder/.local/bin
-# COPY --chown=coder:coder --chmod=755 shims/pip    /home/coder/.local/bin/pip
-# COPY --chown=coder:coder --chmod=755 shims/python /home/coder/.local/bin/python
-# COPY --chown=coder:coder --chmod=755 home/claudebox-memory-init /home/coder/.local/bin/claudebox-memory-init
-# RUN ln -s pip /home/coder/.local/bin/pip3 \
-#     && ln -s python /home/coder/.local/bin/python3
-#
-# # -- Install Claude Code (native installer) ---------------------------
-# RUN su - coder -c "curl -fsSL https://claude.ai/install.sh | bash"
+# -- Install nvm (Node version manager, for project use) --------------
+RUN su - coder -c "curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | PROFILE=/dev/null bash"
 
-# -- Minimal local/bin setup (full shims commented out above) ----------
-RUN mkdir -p /home/coder/.local/bin \
-    && chown -R coder:coder /home/coder/.local
+# -- Install Node.js LTS via nvm --------------------------------------
+RUN su - coder -c ". ~/.nvm/nvm.sh && nvm install --lts && nvm alias default node"
+
+# -- Install sdkman ---------------------------------------------------
+RUN su - coder -c "curl -fsSL 'https://get.sdkman.io?rcupdate=false' | bash"
+
+# -- Install SDKs (last java install becomes the default) -------------
+RUN su - coder -c ". ~/.sdkman/bin/sdkman-init.sh && \
+    sdk install java \$(sdk list java | grep -oE '[0-9]+\.[0-9]+\.[0-9]+-amzn' | grep '^8\.' | sort -V | tail -1) && \
+    sdk install java \$(sdk list java | grep -oE '[0-9]+\.[0-9]+\.[0-9]+-graalce' | grep '^17\.' | sort -V | tail -1) && \
+    sdk install java \$(sdk list java | grep -oE '[0-9]+\.[0-9]+\.[0-9]+-graalce' | grep '^21\.' | sort -V | tail -1) && \
+    sdk install java \$(sdk list java | grep -oE '[0-9]+\.[0-9]+\.[0-9]+-graalce' | grep '^25\.' | sort -V | tail -1) && \
+    sdk install gradle && \
+    sdk install maven && \
+    sdk install jbang && \
+    sdk flush"
+
+# -- Install uv (Python package/version manager) ----------------------
+RUN su - coder -c "curl -LsSf https://astral.sh/uv/install.sh | sh"
+
+# -- Install Python via uv (pre-bake to avoid on-demand download) -----
+RUN su - coder -c "uv python install"
+
+# -- Python wrapper scripts (shim pip/pip3/python/python3 → uv) -------
+RUN mkdir -p /home/coder/.local/bin
+COPY --chown=coder:coder --chmod=755 shims/pip    /home/coder/.local/bin/pip
+COPY --chown=coder:coder --chmod=755 shims/python /home/coder/.local/bin/python
+COPY --chown=coder:coder --chmod=755 home/claudebox-memory-init /home/coder/.local/bin/claudebox-memory-init
+RUN ln -s pip /home/coder/.local/bin/pip3 \
+    && ln -s python /home/coder/.local/bin/python3
+
+# -- Install Claude Code (native installer) ---------------------------
+RUN su - coder -c "curl -fsSL https://claude.ai/install.sh | bash"
 
 # -- Firewall script (must be in place before sudoers references it) --
 COPY libexec/init-firewall.sh /usr/local/libexec/init-firewall.sh
@@ -135,9 +128,10 @@ ENV LANG=en_US.UTF-8
 ENV LC_ALL=en_US.UTF-8
 
 ENV CLAUDE_CONFIG_DIR=/home/coder/.claude
+ENV UV_SYSTEM_PYTHON=1
 
 USER coder
 WORKDIR /workspaces/project
 
 ENTRYPOINT ["/usr/local/libexec/entrypoint.sh"]
-CMD ["bash"]
+CMD ["claude", "--dangerously-skip-permissions"]

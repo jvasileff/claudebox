@@ -46,6 +46,20 @@ if [ -z "${DEVCONTAINER:-}" ] && [ ! -f "$HOME/.gitconfig" ]; then
     cp /etc/skel/.gitconfig "$HOME/.gitconfig"
 fi
 
+# -- Java version selection -------------------------------------------
+JAVA_VERSION_FILE="/workspaces/project/.java-version"
+if [ -f "$JAVA_VERSION_FILE" ]; then
+    JAVA_MAJOR=$(tr -d '[:space:]' < "$JAVA_VERSION_FILE")
+    set +u
+    BEST=$(sdk list java | grep '| installed' | grep -oE "[0-9]+\.[0-9]+\.[0-9]+-[a-z]+" | grep "^${JAVA_MAJOR}\." | sort -V | tail -1 || true)
+    if [ -n "$BEST" ]; then
+        sdk default java "$BEST" > /dev/null
+    else
+        log_warn "Java $JAVA_MAJOR requested in .java-version but not installed; using image default"
+    fi
+    set -u
+fi
+
 # -- Memory sync symlink ----------------------------------------------
 MEMORY_SYNC="/workspaces/project/.claude/memory-sync"
 MEMORY_DIR="/home/coder/.claude/projects/-workspaces-project/memory"

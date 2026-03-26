@@ -1,0 +1,26 @@
+{
+    "name": "Claude Code Sandbox (source)",
+    "remoteUser": "coder",
+    "workspaceFolder": "/workspaces/project",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/project,type=bind",
+    "mounts": [
+        "source=claude-code-${devcontainerId},target=/home/coder/.claude,type=volume"
+    ],
+    "runArgs": [
+        "--cap-drop=ALL",
+        "--cap-add=NET_ADMIN",
+        "--cap-add=NET_RAW",
+        "--cap-add=SETUID",
+        "--cap-add=SETGID",
+        "--cap-add=AUDIT_WRITE"
+    ],
+    "remoteEnv": {
+        "DEVCONTAINER": "1"
+    },
+    "postStartCommand": "/usr/local/libexec/container-init.sh",
+    "waitFor": "postStartCommand",
+    "build": {
+        "dockerfile": "../../Dockerfile",
+        "context": "../../context"
+    }
+}

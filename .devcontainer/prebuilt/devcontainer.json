@@ -1,5 +1,6 @@
 {
-    "name": "Claude Code Sandbox",
+    "name": "Claude Code Sandbox (prebuilt)",
+    "image": "ghcr.io/jvasileff/claudebox:latest",
     "remoteUser": "coder",
     "workspaceFolder": "/workspaces/project",
     "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/project,type=bind",
@@ -18,9 +19,5 @@
         "DEVCONTAINER": "1"
     },
     "postStartCommand": "/usr/local/libexec/container-init.sh",
-    "waitFor": "postStartCommand",
-    "build": {
-        "dockerfile": "Dockerfile",
-        "context": "context"
-    }
+    "waitFor": "postStartCommand"
 }

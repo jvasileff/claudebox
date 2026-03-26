@@ -86,10 +86,13 @@ isolated Claude auth and memory.
 The sandbox can be used as a VS Code Dev Container. The same firewall and
 privilege model applies.
 
-Open this repository in VS Code and select **Reopen in Container** when
-prompted, or run the **Dev Containers: Reopen in Container** command.
-VS Code builds the image automatically from the `build` config in
-`.devcontainer.json`.
+Two configurations are available under `.devcontainer/`:
+
+- **prebuilt** — uses the prebuilt image from `ghcr.io/jvasileff/claudebox:latest`. Fast to start.
+- **source** — builds from the local `Dockerfile` and `context/` directory. Use this when developing the image itself.
+
+Open this repository in VS Code and run **Dev Containers: Reopen in Container**.
+VS Code will prompt you to choose a configuration.
 
 ### How it works
 

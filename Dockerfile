@@ -1,6 +1,6 @@
 FROM debian:trixie-slim
 
-ARG CACHE_BUSTER=2026-03-26e
+ARG CACHE_BUSTER=2026-03-26f
 
 # -- Install runtime dependencies -------------------------------------
 # sudo:               scoped privilege escalation for firewall setup only

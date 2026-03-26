@@ -1,6 +1,11 @@
 {
     "name": "Claude Code Sandbox (source)",
     "remoteUser": "coder",
+    "remoteEnv": {
+        "DEVCONTAINER": "1"
+    },
+    "postStartCommand": "/usr/local/libexec/container-init.sh",
+    "waitFor": "postStartCommand",
     "build": {
         "dockerfile": "../../Dockerfile",
         "context": "../../context"

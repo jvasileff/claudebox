@@ -49,7 +49,7 @@ claudebox() {
     local _real _vol _git_name _git_email _tz
     local -a _env_args=()
     _real=$(cd -P "$(pwd)" && pwd)
-    _vol="claude-$(basename "$_real")-$(echo -n "$_real" | shasum | cut -c1-8)"
+    _vol="claudebox-$(basename "$_real")-$(echo -n "$_real" | shasum | cut -c1-8)"
     _git_name=$(git config --global user.name 2>/dev/null || true)
     _git_email=$(git config --global user.email 2>/dev/null || true)
     _tz=$(readlink /etc/localtime 2>/dev/null | sed 's|.*/zoneinfo/||')

@@ -70,6 +70,7 @@ if [ -d "$MEMORY_SYNC" ]; then
         mkdir -p "$(dirname "$MEMORY_DIR")"
         [ -d "$MEMORY_DIR" ] && rmdir "$MEMORY_DIR"
         ln -s "$MEMORY_SYNC" "$MEMORY_DIR"
+        log_info "memory sync enabled via symlink"
     fi
 else
     log_info "memory sync not configured; run claudebox-memory-init to enable"

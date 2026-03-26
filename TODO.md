@@ -1,6 +1,5 @@
 # TODO
 
 - Investigate devcontainer security concerns, both under VS Code and GitHub Codespaces
-- Troubleshoot running devcontainer as GitHub Codespace (currently doesn't
-  start). Consider dropping devcontainer support.
+- Investigate a Codespaces-specific firewall ruleset that doesn't block internal communication
 - Add image versioning

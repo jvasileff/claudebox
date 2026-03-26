@@ -139,6 +139,14 @@ re-authenticating.
 Project memory (`.claude/memory-sync/`) persists via the bind-mounted project
 directory and the symlink is recreated automatically on each container start.
 
+## GitHub Codespaces
+
+The sandbox can run as a GitHub Codespace using the same devcontainer
+configurations. However, **the iptables firewall is currently skipped
+in Codespaces** because the standard ruleset blocks Codespaces' internal
+communication, causing the container to hang. The container detects
+Codespaces and skips the firewall to avoid this.
+
 ## Security model
 
 **Threat model**: prevent Claude Code from accessing your local network,
@@ -163,7 +171,9 @@ development impractical.
    start (`USER coder` in the Dockerfile). No root process ever runs Claude Code.
 
 If the firewall script fails, the container exits — there is no state
-where Claude Code runs without network isolation.
+where Claude Code runs without network isolation. (Exception: in GitHub
+Codespaces, where iptables rules would block internal communication, the
+firewall is skipped — see [GitHub Codespaces](#github-codespaces) above.)
 
 ## Java version
 

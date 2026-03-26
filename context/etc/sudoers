@@ -1,9 +1,6 @@
 #
 # This file MUST be edited with the 'visudo' command as root.
 #
-# Please consider adding local content in /etc/sudoers.d/ instead of
-# directly modifying this file.
-#
 # See the man page for details on how to write a sudoers file.
 #
 Defaults    env_reset
@@ -17,5 +14,5 @@ Defaults    use_pty
 # Cmnd alias specification
 Cmnd_Alias FIREWALL = /usr/local/libexec/init-firewall.sh
 
-# User privilege specification
+# User privilege specification — coder may ONLY run the firewall script
 coder ALL=(root) NOPASSWD: FIREWALL

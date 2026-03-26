@@ -4,6 +4,11 @@ set -euo pipefail
 # -- This script runs as coder ----------------------------------------
 # If any step fails, the container dies - there is no state where
 # Claude Code runs without a working firewall.
+#
+# Exception: in Codespaces, the firewall is skipped entirely because the
+# standard ruleset blocks Codespaces' internal communication, causing
+# the container to hang. A Codespaces-specific ruleset may be possible
+# (see TODO.md).
 
 # -- Logging helpers (color on tty, plain text otherwise) -------------
 _log() {
@@ -18,7 +23,17 @@ log_info()  { _log "1;32" "INFO"    "$@"; }
 log_warn()  { _log "1;33" "WARNING" "$@"; }
 log_error() { _log "1;31" "ERROR"   "$@"; }
 
-sudo /usr/local/libexec/init-firewall.sh
+# -- Detect Codespaces ------------------------------------------------
+is_codespaces() {
+    [ "${CODESPACES:-}" = "true" ]
+}
+
+# -- Firewall setup ---------------------------------------------------
+if is_codespaces; then
+    log_warn "Codespaces detected — skipping firewall (network access will be unrestricted)"
+else
+    sudo /usr/local/libexec/init-firewall.sh
+fi
 
 # -- Git config -------------------------------------------------------
 # In a dev container, VS Code injects its own .gitconfig (host credentials,

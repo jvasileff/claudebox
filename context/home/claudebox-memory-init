@@ -1,0 +1,52 @@
+#!/bin/bash
+set -euo pipefail
+
+# Explicit memory sync setup for claudebox.
+# Creates the memory-sync directory in the project and symlinks Claude's
+# memory directory to it, so memory persists via the bind-mounted project.
+
+MEMORY_SYNC="/workspaces/project/.claude/memory-sync"
+MEMORY_DIR="/home/coder/.claude/projects/-workspaces-project/memory"
+
+# -- Logging helpers (color on tty, plain text otherwise) -----------------
+_log() {
+    local color="$1" label="$2"; shift 2
+    if [ -t 2 ]; then
+        echo -e "\033[${color}m${label}:\033[0m $*" >&2
+    else
+        echo "${label}: $*" >&2
+    fi
+}
+log_info()  { _log "1;32" "INFO"    "$@"; }
+log_warn()  { _log "1;33" "WARNING" "$@"; }
+log_error() { _log "1;31" "ERROR"   "$@"; }
+
+# -- Already set up? -----------------------------------------------------
+if [ -L "$MEMORY_DIR" ]; then
+    log_info "memory symlink already exists: $MEMORY_DIR -> $(readlink "$MEMORY_DIR")"
+    exit 0
+fi
+
+# -- Create memory-sync in the project if needed --------------------------
+if [ ! -d "$MEMORY_SYNC" ]; then
+    mkdir -p "$MEMORY_SYNC"
+    log_info "created $MEMORY_SYNC"
+fi
+
+# -- Merge existing memory into memory-sync ------------------------------
+if [ -d "$MEMORY_DIR" ] && [ -n "$(ls -A "$MEMORY_DIR")" ]; then
+    if [ -z "$(ls -A "$MEMORY_SYNC")" ]; then
+        cp -a "$MEMORY_DIR/." "$MEMORY_SYNC/"
+        log_info "copied existing memory from $MEMORY_DIR to $MEMORY_SYNC"
+    else
+        log_error "both $MEMORY_DIR and $MEMORY_SYNC are non-empty"
+        log_error "  manually merge contents into $MEMORY_SYNC, then re-run"
+        exit 1
+    fi
+fi
+
+# -- Create symlink -------------------------------------------------------
+mkdir -p "$(dirname "$MEMORY_DIR")"
+[ -d "$MEMORY_DIR" ] && rmdir "$MEMORY_DIR"
+ln -s "$MEMORY_SYNC" "$MEMORY_DIR"
+log_info "symlinked $MEMORY_DIR -> $MEMORY_SYNC"

@@ -49,17 +49,13 @@ if [ -d "$MEMORY_SYNC" ]; then
     if [ -L "$MEMORY_DIR" ]; then
         : # already set up
     elif [ -d "$MEMORY_DIR" ] && [ -n "$(ls -A "$MEMORY_DIR")" ]; then
-        if [ -z "$(ls -A "$MEMORY_SYNC")" ]; then
-            cp -a "$MEMORY_DIR/." "$MEMORY_SYNC/"
-            rm -rf "$MEMORY_DIR"
-            ln -s "$MEMORY_SYNC" "$MEMORY_DIR"
-        else
-            log_warn "both $MEMORY_DIR and $MEMORY_SYNC are non-empty; skipping symlink"
-            log_warn "  To enable memory sync, manually merge their contents into $MEMORY_SYNC"
-        fi
+        log_warn "both $MEMORY_DIR and $MEMORY_SYNC exist; skipping symlink"
+        log_warn "  run claudebox-memory-init to resolve"
     else
         mkdir -p "$(dirname "$MEMORY_DIR")"
-        rm -rf "$MEMORY_DIR"
+        [ -d "$MEMORY_DIR" ] && rmdir "$MEMORY_DIR"
         ln -s "$MEMORY_SYNC" "$MEMORY_DIR"
     fi
+else
+    log_info "memory sync not configured; run claudebox-memory-init to enable"
 fi

@@ -62,6 +62,7 @@ RUN su - coder -c "uv python install"
 RUN mkdir -p /home/coder/.local/bin
 COPY --chown=coder:coder --chmod=755 shims/pip    /home/coder/.local/bin/pip
 COPY --chown=coder:coder --chmod=755 shims/python /home/coder/.local/bin/python
+COPY --chown=coder:coder --chmod=755 home/claudebox-memory-init /home/coder/.local/bin/claudebox-memory-init
 RUN ln -s pip /home/coder/.local/bin/pip3 \
     && ln -s python /home/coder/.local/bin/python3
 

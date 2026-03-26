@@ -139,6 +139,40 @@ re-authenticating.
 Project memory (`.claude/memory-sync/`) persists via the bind-mounted project
 directory and the symlink is recreated automatically on each container start.
 
+## GitHub Codespaces
+
+The sandbox can run as a GitHub Codespace using the same devcontainer
+configurations. However, **Codespaces does not grant the `NET_ADMIN`
+capability**, so the iptables firewall cannot be set up. The container
+detects this and continues without network isolation, logging a warning.
+
+All other sandbox features work normally: unprivileged user, SUID/SGID
+stripping, scoped sudo, Java version selection, memory sync.
+
+### Why this is acceptable
+
+In standalone Docker or VS Code Dev Container mode, the firewall prevents
+Claude Code from reaching your local network, Docker host, and cloud
+metadata endpoints. In Codespaces, these threats do not apply:
+
+- There is no local LAN — the codespace runs on a cloud VM
+- There is no Docker host on your machine to reach
+- Other codespaces are isolated by the platform
+
+The iptables firewall is a defense against local-network threats. When
+those threats are absent (as in Codespaces), skipping the firewall does
+not weaken the effective security posture.
+
+### What is degraded
+
+| Layer | `docker run` / Dev Container | Codespaces |
+|-------|------------------------------|------------|
+| iptables firewall | ✅ Active | ❌ Skipped (no NET_ADMIN) |
+| Privilege isolation | ✅ Active | ✅ Active |
+| SUID/SGID stripping | ✅ Active | ✅ Active |
+| Unprivileged user | ✅ Active | ✅ Active |
+| Fail-closed startup | ✅ Container exits on failure | ⚠️ Warning only |
+
 ## Security model
 
 **Threat model**: prevent Claude Code from accessing your local network,
@@ -163,7 +197,9 @@ development impractical.
    start (`USER coder` in the Dockerfile). No root process ever runs Claude Code.
 
 If the firewall script fails, the container exits — there is no state
-where Claude Code runs without network isolation.
+where Claude Code runs without network isolation. (Exception: in GitHub
+Codespaces, where NET_ADMIN is unavailable, a warning is logged and the
+container continues — see [GitHub Codespaces](#github-codespaces) above.)
 
 ## Java version
 

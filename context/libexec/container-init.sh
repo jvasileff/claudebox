@@ -2,8 +2,9 @@
 set -euo pipefail
 
 # -- This script runs as coder ----------------------------------------
-# If any step fails, the container dies - there is no state where
-# Claude Code runs without a working firewall.
+# Outside of Codespaces: if the firewall fails, the container dies —
+# there is no state where Claude Code runs without network isolation.
+# In Codespaces: the firewall is best-effort (NET_ADMIN is unavailable).
 
 # -- Logging helpers (color on tty, plain text otherwise) -------------
 _log() {
@@ -18,7 +19,21 @@ log_info()  { _log "1;32" "INFO"    "$@"; }
 log_warn()  { _log "1;33" "WARNING" "$@"; }
 log_error() { _log "1;31" "ERROR"   "$@"; }
 
-sudo /usr/local/libexec/init-firewall.sh
+# -- Firewall setup ---------------------------------------------------
+# In Codespaces, NET_ADMIN capability is not granted, so iptables will
+# fail. The Codespaces environment provides its own isolation (cloud VM,
+# no local network), so we log a warning and continue. Everywhere else
+# (docker run, VS Code devcontainer) the firewall is mandatory.
+if [ "${CODESPACES:-}" = "true" ]; then
+    if sudo /usr/local/libexec/init-firewall.sh 2>/dev/null; then
+        log_info "firewall initialized"
+    else
+        log_warn "firewall setup failed (Codespaces does not grant NET_ADMIN)"
+        log_warn "network isolation is NOT active — this is expected in Codespaces"
+    fi
+else
+    sudo /usr/local/libexec/init-firewall.sh
+fi
 
 # -- Git config -------------------------------------------------------
 # In a dev container, VS Code injects its own .gitconfig (host credentials,

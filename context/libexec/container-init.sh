@@ -4,7 +4,11 @@ set -euo pipefail
 # -- This script runs as coder ----------------------------------------
 # Outside of Codespaces: if the firewall fails, the container dies —
 # there is no state where Claude Code runs without network isolation.
-# In Codespaces: the firewall is best-effort (NET_ADMIN is unavailable).
+# In Codespaces: the firewall is skipped entirely. Codespaces does not
+# reliably block NET_ADMIN, so if the capability is silently granted,
+# iptables would succeed and block internal communication (causing a
+# hang). The firewall is unnecessary in Codespaces anyway — there's no
+# local LAN, Docker host, or metadata endpoint to protect against.
 
 # -- Logging helpers (color on tty, plain text otherwise) -------------
 _log() {
@@ -28,13 +32,13 @@ is_codespaces() {
 }
 
 # -- Firewall setup ---------------------------------------------------
+# In Codespaces, skip the firewall entirely. Codespaces does not reliably
+# block NET_ADMIN — if the capability is silently granted, iptables
+# succeeds and blocks Codespaces' internal communication (causing a hang).
+# The firewall protects against local-network threats that don't apply in
+# Codespaces (no LAN, no Docker host, no local metadata endpoint).
 if is_codespaces; then
-    if sudo /usr/local/libexec/init-firewall.sh 2>/dev/null; then
-        log_info "firewall initialized"
-    else
-        log_warn "firewall setup failed (Codespaces does not grant NET_ADMIN)"
-        log_warn "network isolation is NOT active — this is expected in Codespaces"
-    fi
+    log_info "Codespaces detected — skipping firewall setup (not needed here)"
 else
     sudo /usr/local/libexec/init-firewall.sh
 fi

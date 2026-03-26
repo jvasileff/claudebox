@@ -144,7 +144,8 @@ directory and the symlink is recreated automatically on each container start.
 The sandbox can run as a GitHub Codespace using the same devcontainer
 configurations. However, **Codespaces does not grant the `NET_ADMIN`
 capability**, so the iptables firewall cannot be set up. The container
-detects this and continues without network isolation, logging a warning.
+detects Codespaces and skips the firewall entirely, logging an
+informational message.
 
 All other sandbox features work normally: unprivileged user, SUID/SGID
 stripping, scoped sudo, Java version selection, memory sync.
@@ -171,7 +172,7 @@ not weaken the effective security posture.
 | Privilege isolation | ✅ Active | ✅ Active |
 | SUID/SGID stripping | ✅ Active | ✅ Active |
 | Unprivileged user | ✅ Active | ✅ Active |
-| Fail-closed startup | ✅ Container exits on failure | ⚠️ Warning only (firewall) |
+| Fail-closed startup | ✅ Container exits on failure | ⚠️ Firewall skipped (not needed) |
 
 ## Security model
 

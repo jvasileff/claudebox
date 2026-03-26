@@ -171,7 +171,7 @@ not weaken the effective security posture.
 | Privilege isolation | ✅ Active | ✅ Active |
 | SUID/SGID stripping | ✅ Active | ✅ Active |
 | Unprivileged user | ✅ Active | ✅ Active |
-| Fail-closed startup | ✅ Container exits on failure | ⚠️ Warning only |
+| Fail-closed startup | ✅ Container exits on failure | ⚠️ Warning only (firewall) |
 
 ## Security model
 

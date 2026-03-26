@@ -6,10 +6,9 @@ set -euo pipefail
 # Claude Code runs without a working firewall.
 #
 # Exception: in Codespaces, the firewall is skipped entirely. Codespaces
-# does not reliably block NET_ADMIN, so if the capability is silently
-# granted, iptables would succeed and block internal communication
-# (causing a hang). The firewall is unnecessary in Codespaces anyway —
-# there's no local LAN, Docker host, or metadata endpoint to protect.
+# silently grants NET_ADMIN, so iptables succeeds but then blocks
+# Codespaces' internal communication, causing the container to hang.
+# A Codespaces-specific firewall ruleset may be possible (see TODO.md).
 
 # -- Logging helpers (color on tty, plain text otherwise) -------------
 _log() {
@@ -25,16 +24,16 @@ log_warn()  { _log "1;33" "WARNING" "$@"; }
 log_error() { _log "1;31" "ERROR"   "$@"; }
 
 # -- Detect Codespaces ------------------------------------------------
-# CODESPACES env var is the canonical check, but during docker start it
-# may not be injected yet (devcontainer CLI injects it later). We also
-# check for the /workspaces/.codespaces directory as a file marker.
+# The CODESPACES env var is available during postStartCommand. The
+# /workspaces/.codespaces directory check is a belt-and-suspenders
+# fallback in case the env var is unavailable in some execution context.
 is_codespaces() {
     [ "${CODESPACES:-}" = "true" ] || [ -d "/workspaces/.codespaces" ]
 }
 
 # -- Firewall setup ---------------------------------------------------
 if is_codespaces; then
-    log_info "Codespaces detected — skipping firewall setup (not needed here)"
+    log_warn "Codespaces detected — skipping firewall (network access will be unrestricted)"
 else
     sudo /usr/local/libexec/init-firewall.sh
 fi

@@ -142,37 +142,32 @@ directory and the symlink is recreated automatically on each container start.
 ## GitHub Codespaces
 
 The sandbox can run as a GitHub Codespace using the same devcontainer
-configurations. However, **Codespaces does not grant the `NET_ADMIN`
-capability**, so the iptables firewall cannot be set up. The container
-detects Codespaces and skips the firewall entirely, logging an
-informational message.
+configurations. However, **the iptables firewall is currently skipped
+in Codespaces**. Codespaces silently grants `NET_ADMIN`, so iptables
+rules succeed but then block Codespaces' internal communication,
+causing the container to hang. The container detects Codespaces and
+skips the firewall to avoid this.
 
 All other sandbox features work normally: unprivileged user, SUID/SGID
 stripping, scoped sudo, Java version selection, memory sync.
 
-### Why this is acceptable
+### Limitations
 
-In standalone Docker or VS Code Dev Container mode, the firewall prevents
-Claude Code from reaching your local network, Docker host, and cloud
-metadata endpoints. In Codespaces, these threats do not apply:
-
-- There is no local LAN — the codespace runs on a cloud VM
-- There is no Docker host on your machine to reach
-- Other codespaces are isolated by the platform
-
-The iptables firewall is a defense against local-network threats. When
-those threats are absent (as in Codespaces), skipping the firewall does
-not weaken the effective security posture.
+Without the iptables firewall, network access from inside the Codespace
+is not restricted. While there is no local LAN or Docker host to reach,
+the security implications of unrestricted access to GitHub's internal
+APIs and infrastructure from within a Codespace have not been fully
+evaluated.
 
 ### What is degraded
 
 | Layer | `docker run` / Dev Container | Codespaces |
 |-------|------------------------------|------------|
-| iptables firewall | ✅ Active | ❌ Skipped (no NET_ADMIN) |
+| iptables firewall | ✅ Active | ❌ Skipped (causes hang) |
 | Privilege isolation | ✅ Active | ✅ Active |
 | SUID/SGID stripping | ✅ Active | ✅ Active |
 | Unprivileged user | ✅ Active | ✅ Active |
-| Fail-closed startup | ✅ Container exits on failure | ⚠️ Firewall skipped (not needed) |
+| Fail-closed startup | ✅ Container exits on failure | ⚠️ Firewall skipped |
 
 ## Security model
 
@@ -199,8 +194,8 @@ development impractical.
 
 If the firewall script fails, the container exits — there is no state
 where Claude Code runs without network isolation. (Exception: in GitHub
-Codespaces, where NET_ADMIN is unavailable, a warning is logged and the
-container continues — see [GitHub Codespaces](#github-codespaces) above.)
+Codespaces, where iptables rules would block internal communication, the
+firewall is skipped — see [GitHub Codespaces](#github-codespaces) above.)
 
 ## Java version
 

@@ -1,6 +1,6 @@
 FROM debian:trixie-slim
 
-ARG CACHE_BUSTER=2026-03-26m
+ARG CACHE_BUSTER=2026-03-26n
 
 # -- Install runtime dependencies -------------------------------------
 # sudo:               scoped privilege escalation for firewall setup only
@@ -85,12 +85,12 @@ COPY etc/sudoers /etc/sudoers
 RUN chown root:root /etc/sudoers \
     && chmod 0440 /etc/sudoers
 
-# -- Hardening (build time) — DISABLED for Codespaces debugging -------
+# -- Hardening (build time) -------------------------------------------
 # Strip all SUID/SGID bits from every binary on the system, except sudo.
 # sudo retains its SUID bit so coder can escalate only to run the
 # firewall script (governed by the tightly-scoped sudoers config above).
-# RUN find / -xdev -perm /6000 -type f ! -path /usr/bin/sudo \
-#         -exec chmod a-s {} + 2>/dev/null; true
+RUN find / -xdev -perm /6000 -type f ! -path /usr/bin/sudo \
+        -exec chmod a-s {} + 2>/dev/null; true
 
 # -- Shell environment ------------------------------------------------
 COPY home/dot.gitconfig /etc/skel/.gitconfig

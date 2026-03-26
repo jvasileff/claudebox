@@ -42,6 +42,7 @@ is_codespaces() {
 # (e.g. missing NET_ADMIN), the script exits non-zero so the container
 # doesn't run Claude Code without network isolation. Use `docker run`
 # with --cap-drop=ALL --cap-add=NET_ADMIN --cap-add=NET_RAW ... flags.
+log_info "CODESPACES=${CODESPACES:-<unset>} /workspaces/.codespaces exists=$([ -d /workspaces/.codespaces ] && echo yes || echo no)"
 if is_codespaces; then
     log_info "Codespaces detected — skipping firewall setup (not needed here)"
 else

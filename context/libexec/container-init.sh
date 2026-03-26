@@ -5,6 +5,10 @@ echo "=== [container-init.sh] Starting ==="
 echo "=== [container-init.sh] whoami=$(whoami) uid=$(id -u) gid=$(id -g) ==="
 echo "=== [container-init.sh] HOME=$HOME PWD=$PWD ==="
 echo "=== [container-init.sh] CODESPACES=${CODESPACES:-unset} DEVCONTAINER=${DEVCONTAINER:-unset} ==="
+echo "=== [container-init.sh] checking sudoers ==="
+ls -la /etc/sudoers /etc/sudoers.d/ 2>&1 || true
+echo "=== [container-init.sh] sudo -l ==="
+sudo -l 2>&1 || true
 
 # -- This script runs as coder ----------------------------------------
 # Outside of Codespaces: if the firewall fails, the container dies —
@@ -24,9 +28,17 @@ log_info()  { _log "1;32" "INFO"    "$@"; }
 log_warn()  { _log "1;33" "WARNING" "$@"; }
 log_error() { _log "1;31" "ERROR"   "$@"; }
 
+# -- Detect Codespaces ------------------------------------------------
+# CODESPACES env var is the canonical check, but during docker start it
+# may not be injected yet (devcontainer CLI injects it later). We also
+# check for the /workspaces/.codespaces directory as a file marker.
+is_codespaces() {
+    [ "${CODESPACES:-}" = "true" ] || [ -d "/workspaces/.codespaces" ]
+}
+
 # -- Firewall setup ---------------------------------------------------
 echo "=== [container-init.sh] Firewall setup ==="
-if [ "${CODESPACES:-}" = "true" ]; then
+if is_codespaces; then
     echo "=== [container-init.sh] Codespaces detected, firewall is best-effort ==="
     if sudo /usr/local/libexec/init-firewall.sh 2>/dev/null; then
         log_info "firewall initialized"

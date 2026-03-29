@@ -56,22 +56,25 @@ if [ -f "$JAVA_VERSION_FILE" ]; then
     set -u
 fi
 
-# -- Memory sync symlink ----------------------------------------------
-MEMORY_SYNC="/workspaces/project/.claude/memory-sync"
-MEMORY_DIR="/home/coder/.claude/projects/-workspaces-project/memory"
+# -- Memory sync symlink (Claude only) ---------------------------------
+# Skip when ~/.claude is not a volume mount (e.g. when running codex)
+if mountpoint -q "$HOME/.claude" 2>/dev/null; then
+    MEMORY_SYNC="/workspaces/project/.claude/memory-sync"
+    MEMORY_DIR="/home/coder/.claude/projects/-workspaces-project/memory"
 
-if [ -d "$MEMORY_SYNC" ]; then
-    if [ -L "$MEMORY_DIR" ]; then
-        : # already set up
-    elif [ -d "$MEMORY_DIR" ] && [ -n "$(ls -A "$MEMORY_DIR")" ]; then
-        log_warn "both $MEMORY_DIR and $MEMORY_SYNC exist; skipping symlink"
-        log_warn "  run claudebox-memory-init to resolve"
+    if [ -d "$MEMORY_SYNC" ]; then
+        if [ -L "$MEMORY_DIR" ]; then
+            : # already set up
+        elif [ -d "$MEMORY_DIR" ] && [ -n "$(ls -A "$MEMORY_DIR")" ]; then
+            log_warn "both $MEMORY_DIR and $MEMORY_SYNC exist; skipping symlink"
+            log_warn "  run claudebox-memory-init to resolve"
+        else
+            mkdir -p "$(dirname "$MEMORY_DIR")"
+            [ -d "$MEMORY_DIR" ] && rmdir "$MEMORY_DIR"
+            ln -s "$MEMORY_SYNC" "$MEMORY_DIR"
+            log_info "memory sync enabled via symlink"
+        fi
     else
-        mkdir -p "$(dirname "$MEMORY_DIR")"
-        [ -d "$MEMORY_DIR" ] && rmdir "$MEMORY_DIR"
-        ln -s "$MEMORY_SYNC" "$MEMORY_DIR"
-        log_info "memory sync enabled via symlink"
+        log_info "memory sync not configured; run claudebox-memory-init to enable"
     fi
-else
-    log_info "memory sync not configured; run claudebox-memory-init to enable"
 fi

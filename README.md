@@ -72,7 +72,39 @@ claudebox() {
 
 Then just `cd` into any project and run `claudebox`.
 
-The function reads `user.name` and `user.email` from your host git config and passes
+To run OpenAI Codex instead, use `codexbox`:
+
+```bash
+codexbox() {
+    local _real _vol _git_name _git_email _tz
+    local -a _env_args=()
+    _real=$(cd -P "$(pwd)" && pwd)
+    _vol="codexbox-$(basename "$_real")-$(echo -n "$_real" | shasum | cut -c1-8)"
+    _git_name=$(git config --global user.name 2>/dev/null || true)
+    _git_email=$(git config --global user.email 2>/dev/null || true)
+    _tz=$(readlink /etc/localtime 2>/dev/null | sed 's|.*/zoneinfo/||')
+    [[ -n "$_git_name" ]]  && _env_args+=(-e "GIT_AUTHOR_NAME=$_git_name"  -e "GIT_COMMITTER_NAME=$_git_name")
+    [[ -n "$_git_email" ]] && _env_args+=(-e "GIT_AUTHOR_EMAIL=$_git_email" -e "GIT_COMMITTER_EMAIL=$_git_email")
+    [[ -n "$_tz" ]]        && _env_args+=(-e "TZ=$_tz")
+    [[ $# -eq 0 ]] && set -- codex --yolo
+    docker run -it --rm \
+        --cap-drop=ALL \
+        --cap-add=NET_ADMIN \
+        --cap-add=NET_RAW \
+        --cap-add=SETUID \
+        --cap-add=SETGID \
+        --cap-add=AUDIT_WRITE \
+        "${_env_args[@]}" \
+        -v "$_vol:/home/coder/.codex" \
+        -v "$_real:/workspaces/project" \
+        ghcr.io/jvasileff/claudebox:latest "$@"
+}
+```
+
+Each tool gets its own isolated volume — `claudebox` mounts `~/.claude` and
+`codexbox` mounts `~/.codex`. Neither tool has access to the other's state.
+
+The functions read `user.name` and `user.email` from your host git config and pass
 them into the container as `GIT_AUTHOR_NAME`, `GIT_COMMITTER_NAME`, etc. Only name
 and email are passed — no credentials, signing keys, or helpers. The host timezone
 is also passed via `TZ`.
@@ -159,6 +191,8 @@ development impractical.
 1. **iptables firewall** (`container-init.sh`, via sudo): blocks RFC 1918 ranges,
    link-local, and CGNAT ranges. DNS is allowed only to the container's
    configured resolver. All public internet traffic is permitted.
+   IPv6 is blocked, and the image configures `/etc/gai.conf` to prefer IPv4
+   address selection so clients do not try unreachable AAAA records first.
 
 2. **Privilege isolation** (build time + runtime): all SUID/SGID bits stripped
    except sudo; sudo is configured to allow only `/usr/local/bin/init-firewall.sh`

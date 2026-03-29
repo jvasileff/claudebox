@@ -18,7 +18,7 @@ RUN apt-get install -y --no-install-recommends \
         sudo iptables iproute2 zip unzip curl ca-certificates \
         git vim tmux lsof dnsutils bash-completion \
         gcc zlib1g-dev gh jq fzf less procps gnupg2 \
-        openssh-client iputils-ping rsync file \
+        openssh-client iputils-ping rsync file wget \
         ripgrep fd-find bat tree \
         tzdata locales \
     && apt-get clean \
@@ -28,9 +28,7 @@ RUN apt-get install -y --no-install-recommends \
 
 # -- Create unprivileged user -----------------------------------------
 RUN groupadd -g 1000 coder \
-    && useradd -m -u 1000 -g coder -s /bin/bash coder \
-    && mkdir -p /home/coder/.claude \
-    && chown coder:coder /home/coder/.claude
+    && useradd -m -u 1000 -g coder -s /bin/bash coder
 
 # -- Install nvm (Node version manager, for project use) --------------
 RUN su - coder -c "curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | PROFILE=/dev/null bash"
@@ -68,6 +66,16 @@ RUN ln -s pip /home/coder/.local/bin/pip3 \
 
 # -- Install Claude Code (native installer) ---------------------------
 RUN su - coder -c "curl -fsSL https://claude.ai/install.sh | bash"
+
+# -- Install OpenAI Codex CLI ------------------------------------------
+RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g @openai/codex"
+
+# -- Volume mount points -----------------------------------------------
+# Pre-create as coder:coder so Docker honours ownership for new volumes.
+# Clear any Claude installer artifacts; only volume data should be here.
+RUN rm -rf /home/coder/.claude \
+    && mkdir -p /home/coder/.claude /home/coder/.codex \
+    && chown coder:coder /home/coder/.claude /home/coder/.codex
 
 # -- Firewall script (must be in place before sudoers references it) --
 COPY libexec/init-firewall.sh /usr/local/libexec/init-firewall.sh
@@ -129,6 +137,11 @@ ENV LC_ALL=en_US.UTF-8
 
 ENV CLAUDE_CONFIG_DIR=/home/coder/.claude
 ENV UV_SYSTEM_PYTHON=1
+
+# -- Prefer IPv4 address selection ------------------------------------
+# The firewall explicitly blocks IPv6. Prefer IPv4 in getaddrinfo so
+# tools do not try unreachable AAAA records first.
+RUN printf 'precedence ::ffff:0:0/96  100\n' >> /etc/gai.conf
 
 USER coder
 WORKDIR /workspaces/project

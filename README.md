@@ -195,7 +195,7 @@ development impractical.
    address selection so clients do not try unreachable AAAA records first.
 
 2. **Privilege isolation** (build time + runtime): all SUID/SGID bits stripped
-   except sudo; sudo is configured to allow only `/usr/local/bin/init-firewall.sh`
+   except sudo; sudo is configured to allow only `/usr/local/libexec/init-firewall.sh`
    as root — no other privilege escalation path exists.
 
 3. **Docker runtime flags**: all capabilities dropped except NET_ADMIN/NET_RAW,

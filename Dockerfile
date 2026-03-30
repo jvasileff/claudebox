@@ -16,10 +16,10 @@ RUN apt-get update
 RUN apt-get upgrade -y
 RUN apt-get install -y --no-install-recommends \
         sudo iptables iproute2 zip unzip curl ca-certificates \
-        git vim tmux lsof dnsutils bash-completion \
+        git vim tmux lsof dnsutils bash-completion zsh \
         gcc zlib1g-dev gh jq fzf less procps gnupg2 \
         openssh-client iputils-ping rsync file wget \
-        ripgrep fd-find bat tree \
+        ripgrep fd-find bat tree just \
         tzdata locales \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \

@@ -64,6 +64,13 @@ COPY --chown=coder:coder --chmod=755 home/claudebox-memory-init /home/coder/.loc
 RUN ln -s pip /home/coder/.local/bin/pip3 \
     && ln -s python /home/coder/.local/bin/python3
 
+# -- Install Go -------------------------------------------------------
+RUN GOVERSION=$(curl -fsSL https://go.dev/VERSION?m=text | head -1) && \
+    curl -fsSL "https://go.dev/dl/${GOVERSION}.linux-amd64.tar.gz" | tar -C /usr/local -xz
+
+# -- Install Rust via rustup ------------------------------------------
+RUN su - coder -c "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
+
 # -- Install Claude Code (native installer) ---------------------------
 RUN su - coder -c "curl -fsSL https://claude.ai/install.sh | bash"
 

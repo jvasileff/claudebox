@@ -4,7 +4,7 @@ on:
   push:
     branches: [master]
   schedule:
-    - cron: '0 4 * * *'   # 04:00 UTC daily
+    - cron: '0 7 * * *'   # 07:00 UTC daily (02:00 EST / 03:00 EDT)
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/claudebox

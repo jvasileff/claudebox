@@ -45,7 +45,7 @@ docker build -f Dockerfile -t claudebox context
 ### Shell function
 
 ```bash
-claudebox() {
+cbox() {
     local _real _vol _git_name _git_email _tz
     local -a _env_args=()
     _real=$(cd -P "$(pwd)" && pwd)
@@ -56,6 +56,9 @@ claudebox() {
     [[ -n "$_git_name" ]]  && _env_args+=(-e "GIT_AUTHOR_NAME=$_git_name"  -e "GIT_COMMITTER_NAME=$_git_name")
     [[ -n "$_git_email" ]] && _env_args+=(-e "GIT_AUTHOR_EMAIL=$_git_email" -e "GIT_COMMITTER_EMAIL=$_git_email")
     [[ -n "$_tz" ]]        && _env_args+=(-e "TZ=$_tz")
+    if [[ $# -eq 0 ]]; then
+        set -- bash -c 'echo "Updating..." && claude update && exec claude --dangerously-skip-permissions'
+    fi
     docker pull --quiet ghcr.io/jvasileff/claudebox:latest 2>/dev/null || true
     docker run -it --rm \
         --cap-drop=ALL \
@@ -71,7 +74,7 @@ claudebox() {
 }
 ```
 
-Then just `cd` into any project and run `claudebox`.
+Then just `cd` into any project and run `cbox`.
 
 To run OpenAI Codex instead, use `codexbox`:
 
@@ -87,7 +90,9 @@ codexbox() {
     [[ -n "$_git_name" ]]  && _env_args+=(-e "GIT_AUTHOR_NAME=$_git_name"  -e "GIT_COMMITTER_NAME=$_git_name")
     [[ -n "$_git_email" ]] && _env_args+=(-e "GIT_AUTHOR_EMAIL=$_git_email" -e "GIT_COMMITTER_EMAIL=$_git_email")
     [[ -n "$_tz" ]]        && _env_args+=(-e "TZ=$_tz")
-    [[ $# -eq 0 ]] && set -- codex --yolo
+    if [[ $# -eq 0 ]]; then
+        set -- bash -c 'echo "Updating..." && npm update -g @openai/codex && exec codex --yolo'
+    fi
     docker pull --quiet ghcr.io/jvasileff/claudebox:latest 2>/dev/null || true
     docker run -it --rm \
         --cap-drop=ALL \
@@ -103,7 +108,7 @@ codexbox() {
 }
 ```
 
-Each tool gets its own isolated volume — `claudebox` mounts `~/.claude` and
+Each tool gets its own isolated volume — `cbox` mounts `~/.claude` and
 `codexbox` mounts `~/.codex`. Neither tool has access to the other's state.
 
 The functions read `user.name` and `user.email` from your host git config and pass

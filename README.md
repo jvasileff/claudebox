@@ -12,19 +12,7 @@ Minimal Docker sandbox for running Claude Code with network isolation.
   run the firewall setup script
 - If the firewall fails to initialize, the container refuses to start
 
-## Run
-
-```bash
-docker run -it --rm \
-    --cap-drop=ALL \
-    --cap-add=NET_ADMIN \
-    --cap-add=NET_RAW \
-    --cap-add=SETUID \
-    --cap-add=SETGID \
-    --cap-add=AUDIT_WRITE \
-    -v "$(pwd):/workspaces/project" \
-    ghcr.io/jvasileff/claudebox:latest
-```
+## Usage
 
 ### Build from source
 
@@ -32,17 +20,7 @@ docker run -it --rm \
 docker build -f Dockerfile -t claudebox context
 ```
 
-### What the flags do
-
-| Flag | Purpose |
-|------|---------|
-| `--cap-drop=ALL` | Remove all Linux capabilities |
-| `--cap-add=NET_ADMIN,NET_RAW` | Required for iptables firewall setup, used once at startup via sudo |
-| `--cap-add=SETUID,SETGID` | Required for sudo to set up the target process's UID/GID when running the firewall script |
-| `--cap-add=AUDIT_WRITE` | Required for sudo to log to the kernel audit subsystem |
-| `-v "$(pwd):..."` | Mount your project into the container |
-
-### Shell function
+### Shell functions
 
 ```bash
 cbox() {
@@ -119,6 +97,16 @@ is also passed via `TZ`.
 The volume name is derived from the project's basename and a hash of its real path
 (symlinks resolved), e.g. `claude-myproject-a3f2b1c4`. Each project gets its own
 isolated Claude auth and memory.
+
+### What the flags do
+
+| Flag | Purpose |
+|------|---------|
+| `--cap-drop=ALL` | Remove all Linux capabilities |
+| `--cap-add=NET_ADMIN,NET_RAW` | Required for iptables firewall setup, used once at startup via sudo |
+| `--cap-add=SETUID,SETGID` | Required for sudo to set up the target process's UID/GID when running the firewall script |
+| `--cap-add=AUDIT_WRITE` | Required for sudo to log to the kernel audit subsystem |
+| `-v "$(pwd):..."` | Mount your project into the container |
 
 ## VS Code Dev Container
 

@@ -161,4 +161,4 @@ USER coder
 WORKDIR /workspaces/project
 
 ENTRYPOINT ["/usr/local/libexec/entrypoint.sh"]
-CMD ["claude", "--dangerously-skip-permissions"]
+CMD ["/bin/bash"]

@@ -72,6 +72,12 @@ RUN GOVERSION=$(curl -fsSL https://go.dev/VERSION?m=text | head -1) && \
 # -- Install Rust via rustup ------------------------------------------
 RUN su - coder -c "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
 
+ARG AI_CACHE_BUSTER=2026-04-06
+
+# -- Daily OS security patches ----------------------------------------
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # -- Install Claude Code (native installer) ---------------------------
 RUN su - coder -c "curl -fsSL https://claude.ai/install.sh | bash"
 

@@ -3,6 +3,8 @@ name: Build and push image
 on:
   push:
     branches: [master]
+  schedule:
+    - cron: '0 4 * * *'   # 04:00 UTC daily
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/claudebox
@@ -30,9 +32,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Pull previous image for cache
+        run: docker pull $IMAGE:latest-${{ matrix.platform }} || true
+
       - name: Build and push
         run: |
-          docker build -f Dockerfile -t $IMAGE:latest-${{ matrix.platform }} context
+          docker build \
+            --cache-from $IMAGE:latest-${{ matrix.platform }} \
+            --build-arg CACHE_BUSTER=$(date +%Y-%m) \
+            --build-arg AI_CACHE_BUSTER=$(date +%Y-%m-%d) \
+            -f Dockerfile \
+            -t $IMAGE:latest-${{ matrix.platform }} \
+            context
           docker push $IMAGE:latest-${{ matrix.platform }}
 
   manifest:

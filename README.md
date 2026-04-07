@@ -56,6 +56,7 @@ claudebox() {
     [[ -n "$_git_name" ]]  && _env_args+=(-e "GIT_AUTHOR_NAME=$_git_name"  -e "GIT_COMMITTER_NAME=$_git_name")
     [[ -n "$_git_email" ]] && _env_args+=(-e "GIT_AUTHOR_EMAIL=$_git_email" -e "GIT_COMMITTER_EMAIL=$_git_email")
     [[ -n "$_tz" ]]        && _env_args+=(-e "TZ=$_tz")
+    docker pull --quiet ghcr.io/jvasileff/claudebox:latest 2>/dev/null || true
     docker run -it --rm \
         --cap-drop=ALL \
         --cap-add=NET_ADMIN \
@@ -87,6 +88,7 @@ codexbox() {
     [[ -n "$_git_email" ]] && _env_args+=(-e "GIT_AUTHOR_EMAIL=$_git_email" -e "GIT_COMMITTER_EMAIL=$_git_email")
     [[ -n "$_tz" ]]        && _env_args+=(-e "TZ=$_tz")
     [[ $# -eq 0 ]] && set -- codex --yolo
+    docker pull --quiet ghcr.io/jvasileff/claudebox:latest 2>/dev/null || true
     docker run -it --rm \
         --cap-drop=ALL \
         --cap-add=NET_ADMIN \

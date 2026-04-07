@@ -17,6 +17,7 @@ _claudebox_run() {
     echo "Pulling latest image..." >&2
     docker pull --quiet ghcr.io/jvasileff/claudebox:latest 2>/dev/null || true
     docker run -it --rm \
+        --name "$_vol" \
         --cap-drop=ALL \
         --cap-add=NET_ADMIN \
         --cap-add=NET_RAW \

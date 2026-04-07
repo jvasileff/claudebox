@@ -47,6 +47,7 @@ RUN su - coder -c ". ~/.sdkman/bin/sdkman-init.sh && \
     sdk install java \$(sdk list java | grep -oE '[0-9]+\.[0-9]+\.[0-9]+-graalce' | grep '^25\.' | sort -V | tail -1) && \
     sdk install gradle && \
     sdk install maven && \
+    sdk install jextract && \
     sdk install jbang && \
     sdk flush"
 

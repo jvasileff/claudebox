@@ -22,71 +22,15 @@ docker build -f Dockerfile -t claudebox context
 
 ### Shell functions
 
-```bash
-cbox() {
-    local _real _vol _git_name _git_email _tz
-    local -a _env_args=()
-    _real=$(cd -P "$(pwd)" && pwd)
-    _vol="claudebox-$(basename "$_real")-$(echo -n "$_real" | shasum | cut -c1-8)"
-    _git_name=$(git config --global user.name 2>/dev/null || true)
-    _git_email=$(git config --global user.email 2>/dev/null || true)
-    _tz=$(readlink /etc/localtime 2>/dev/null | sed 's|.*/zoneinfo/||')
-    [[ -n "$_git_name" ]]  && _env_args+=(-e "GIT_AUTHOR_NAME=$_git_name"  -e "GIT_COMMITTER_NAME=$_git_name")
-    [[ -n "$_git_email" ]] && _env_args+=(-e "GIT_AUTHOR_EMAIL=$_git_email" -e "GIT_COMMITTER_EMAIL=$_git_email")
-    [[ -n "$_tz" ]]        && _env_args+=(-e "TZ=$_tz")
-    if [[ $# -eq 0 ]]; then
-        set -- bash -c 'echo "Updating..." && claude update && exec claude --dangerously-skip-permissions'
-    fi
-    echo "Pulling latest image..." >&2
-    docker pull --quiet ghcr.io/jvasileff/claudebox:latest 2>/dev/null || true
-    docker run -it --rm \
-        --cap-drop=ALL \
-        --cap-add=NET_ADMIN \
-        --cap-add=NET_RAW \
-        --cap-add=SETUID \
-        --cap-add=SETGID \
-        --cap-add=AUDIT_WRITE \
-        "${_env_args[@]}" \
-        -v "$_vol:/home/coder/.claude" \
-        -v "$_real:/workspaces/project" \
-        ghcr.io/jvasileff/claudebox:latest "$@"
-}
-```
-
-Then just `cd` into any project and run `cbox`.
-
-To run OpenAI Codex instead, use `codexbox`:
+Source `claudebox.sh` from your shell config to get the `cbox` and `codexbox`
+functions:
 
 ```bash
-codexbox() {
-    local _real _vol _git_name _git_email _tz
-    local -a _env_args=()
-    _real=$(cd -P "$(pwd)" && pwd)
-    _vol="codexbox-$(basename "$_real")-$(echo -n "$_real" | shasum | cut -c1-8)"
-    _git_name=$(git config --global user.name 2>/dev/null || true)
-    _git_email=$(git config --global user.email 2>/dev/null || true)
-    _tz=$(readlink /etc/localtime 2>/dev/null | sed 's|.*/zoneinfo/||')
-    [[ -n "$_git_name" ]]  && _env_args+=(-e "GIT_AUTHOR_NAME=$_git_name"  -e "GIT_COMMITTER_NAME=$_git_name")
-    [[ -n "$_git_email" ]] && _env_args+=(-e "GIT_AUTHOR_EMAIL=$_git_email" -e "GIT_COMMITTER_EMAIL=$_git_email")
-    [[ -n "$_tz" ]]        && _env_args+=(-e "TZ=$_tz")
-    if [[ $# -eq 0 ]]; then
-        set -- bash -c 'echo "Updating..." && npm update -g @openai/codex && exec codex --yolo'
-    fi
-    echo "Pulling latest image..." >&2
-    docker pull --quiet ghcr.io/jvasileff/claudebox:latest 2>/dev/null || true
-    docker run -it --rm \
-        --cap-drop=ALL \
-        --cap-add=NET_ADMIN \
-        --cap-add=NET_RAW \
-        --cap-add=SETUID \
-        --cap-add=SETGID \
-        --cap-add=AUDIT_WRITE \
-        "${_env_args[@]}" \
-        -v "$_vol:/home/coder/.codex" \
-        -v "$_real:/workspaces/project" \
-        ghcr.io/jvasileff/claudebox:latest "$@"
-}
+source /path/to/claudebox/claudebox.sh
 ```
+
+Then just `cd` into any project and run `cbox`. To run OpenAI Codex instead,
+use `codexbox`.
 
 Each tool gets its own isolated volume — `cbox` mounts `~/.claude` and
 `codexbox` mounts `~/.codex`. Neither tool has access to the other's state.

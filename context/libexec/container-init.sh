@@ -42,6 +42,11 @@ if [ -z "${DEVCONTAINER:-}" ] && [ ! -f "$HOME/.gitconfig" ]; then
     cp /etc/skel/.gitconfig "$HOME/.gitconfig"
 fi
 
+# -- Claude Code default settings -------------------------------------
+if [ ! -f "$HOME/.claude/settings.json" ]; then
+    cp /etc/skel/.claude/settings.json "$HOME/.claude/settings.json"
+fi
+
 # -- Java version selection -------------------------------------------
 JAVA_VERSION_FILE="/workspaces/project/.java-version"
 if [ -f "$JAVA_VERSION_FILE" ]; then

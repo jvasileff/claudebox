@@ -37,6 +37,7 @@ cbox() {
     if [[ $# -eq 0 ]]; then
         set -- bash -c 'echo "Updating..." && claude update && exec claude --dangerously-skip-permissions'
     fi
+    echo "Pulling latest image..." >&2
     docker pull --quiet ghcr.io/jvasileff/claudebox:latest 2>/dev/null || true
     docker run -it --rm \
         --cap-drop=ALL \
@@ -71,6 +72,7 @@ codexbox() {
     if [[ $# -eq 0 ]]; then
         set -- bash -c 'echo "Updating..." && npm update -g @openai/codex && exec codex --yolo'
     fi
+    echo "Pulling latest image..." >&2
     docker pull --quiet ghcr.io/jvasileff/claudebox:latest 2>/dev/null || true
     docker run -it --rm \
         --cap-drop=ALL \

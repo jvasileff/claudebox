@@ -123,6 +123,14 @@ RUN su - coder -c "curl -fsSL https://claude.ai/install.sh | bash"
 # -- Install OpenAI Codex CLI ------------------------------------------
 RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g @openai/codex"
 
+# -- Install https://github.com/badlogic/pi-mono
+RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g \
+    @mariozechner/pi-ai \
+    @mariozechner/pi-agent-core \
+    @mariozechner/pi-coding-agent \
+    @mariozechner/pi-mom \
+    @mariozechner/pi-tui"
+
 # -- Volume mount points -----------------------------------------------
 # Pre-create as coder:coder so Docker honours ownership for new volumes.
 # Clear any Claude installer artifacts; only volume data should be here.

@@ -1,3 +1,36 @@
+FROM debian:trixie-slim AS sqlite3_builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc make wget ca-certificates \
+    libreadline-dev zlib1g-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+ARG SQLITE_VERSION=3530000
+ARG SQLITE_YEAR=2026
+
+RUN wget https://www.sqlite.org/${SQLITE_YEAR}/sqlite-autoconf-${SQLITE_VERSION}.tar.gz && \
+    tar xzf sqlite-autoconf-${SQLITE_VERSION}.tar.gz && \
+    cd sqlite-autoconf-${SQLITE_VERSION} && \
+    CFLAGS="-O2 \
+            -DSQLITE_ENABLE_API_ARMOR \
+            -DSQLITE_ENABLE_COLUMN_METADATA \
+            -DSQLITE_ENABLE_FTS5 \
+            -DSQLITE_ENABLE_GEOPOLY \
+            -DSQLITE_ENABLE_MEMORY_MANAGEMENT \
+            -DSQLITE_ENABLE_PREUPDATE_HOOK \
+            -DSQLITE_ENABLE_SESSION \
+            -DSQLITE_ENABLE_STAT4 \
+            -DSQLITE_ENABLE_UNLOCK_NOTIFY \
+            -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT \
+            -DSQLITE_USE_URI \
+            -DSQLITE_SECURE_DELETE \
+            -DSQLITE_LIKE_DOESNT_MATCH_BLOBS \
+            -DSQLITE_SOUNDEX \
+            -DSQLITE_MAX_VARIABLE_NUMBER=250000" \
+    ./configure --prefix=/usr/local && \
+    make -j$(nproc) && \
+    make install
+
 FROM debian:trixie-slim
 
 ARG CACHE_BUSTER=2026-04
@@ -12,6 +45,7 @@ ARG CACHE_BUSTER=2026-04
 # gh, jq, fzf:        GitHub CLI, JSON processor, fuzzy finder
 # less, procps:       pager and process tools (ps, top)
 # gnupg2:             GPG for git signing and package verification
+# libreadline8t64:    for sqlite3
 RUN apt-get update
 RUN apt-get upgrade -y
 RUN apt-get install -y --no-install-recommends \
@@ -21,10 +55,15 @@ RUN apt-get install -y --no-install-recommends \
         openssh-client iputils-ping rsync file wget \
         ripgrep fd-find bat tree just \
         tzdata locales \
+        libreadline8t64 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen \
     && locale-gen
+
+# -- install sqlite3
+COPY --from=sqlite3_builder /usr/local /usr/local
+RUN ldconfig
 
 # -- Create unprivileged user -----------------------------------------
 RUN groupadd -g 1000 coder \

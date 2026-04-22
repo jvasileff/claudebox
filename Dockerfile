@@ -46,6 +46,7 @@ ARG CACHE_BUSTER=2026-04
 # less, procps:       pager and process tools (ps, top)
 # gnupg2:             GPG for git signing and package verification
 # libreadline8t64:    for sqlite3
+# ripgrep bubblewrap socat: required for claude code sandbox
 RUN apt-get update
 RUN apt-get upgrade -y
 RUN apt-get install -y --no-install-recommends \
@@ -53,9 +54,10 @@ RUN apt-get install -y --no-install-recommends \
         git vim tmux lsof dnsutils bash-completion zsh \
         gcc zlib1g-dev gh jq fzf less procps gnupg2 \
         openssh-client iputils-ping rsync file wget \
-        ripgrep fd-find bat tree just \
+        ripgrep fd-find bat tree just bc gawk \
         tzdata locales \
         libreadline8t64 \
+        bubblewrap socat \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen \

@@ -83,6 +83,7 @@ RUN su - coder -c "curl -fsSL 'https://get.sdkman.io?rcupdate=false' | bash"
 # -- Install SDKs (last java install becomes the default) -------------
 RUN su - coder -c ". ~/.sdkman/bin/sdkman-init.sh && \
     sdk install java \$(sdk list java | grep -oE '[0-9]+\.[0-9]+\.[0-9]+-amzn' | grep '^8\.' | sort -V | tail -1) && \
+    sdk install java \$(sdk list java | grep -oE '[0-9]+\.[0-9]+\.[0-9]+-amzn' | grep '^11\.' | sort -V | tail -1) && \
     sdk install java \$(sdk list java | grep -oE '[0-9]+\.[0-9]+\.[0-9]+-graalce' | grep '^17\.' | sort -V | tail -1) && \
     sdk install java \$(sdk list java | grep -oE '[0-9]+\.[0-9]+\.[0-9]+-graalce' | grep '^21\.' | sort -V | tail -1) && \
     sdk install java \$(sdk list java | grep -oE '[0-9]+\.[0-9]+\.[0-9]+-graalce' | grep '^25\.' | sort -V | tail -1) && \

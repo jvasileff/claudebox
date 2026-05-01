@@ -36,8 +36,8 @@ fi
 # -- Merge existing memory into memory-sync ------------------------------
 if [ -d "$MEMORY_DIR" ] && [ -n "$(ls -A "$MEMORY_DIR")" ]; then
     if [ -z "$(ls -A "$MEMORY_SYNC")" ]; then
-        cp -a "$MEMORY_DIR/." "$MEMORY_SYNC/"
-        log_info "copied existing memory from $MEMORY_DIR to $MEMORY_SYNC"
+        (shopt -s dotglob nullglob; mv "$MEMORY_DIR"/* "$MEMORY_SYNC/")
+        log_info "moved existing memory from $MEMORY_DIR to $MEMORY_SYNC"
     else
         log_error "both $MEMORY_DIR and $MEMORY_SYNC are non-empty"
         log_error "  manually merge contents into $MEMORY_SYNC, then re-run"

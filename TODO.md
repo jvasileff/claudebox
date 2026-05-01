@@ -1,5 +1,24 @@
 # TODO
 
+## Memory-sync auto-setup
+
+`container-init.sh` only symlinks when `.claude/memory-sync/` already exists
+in the project. Should it auto-create the directory and symlink on first run
+when the project doesn't have memory-sync data yet?
+
+## Consider adding tini
+
+Have tini run as pid 1 to reap zombie processes processes.
+
+Either install `tini` via apt and then use:
+
+    ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/libexec/entrypoint.sh"]
+
+Or add `--init` to `docker run` in the startup function:
+
+    docker run --init -it --rm \
+    ...
+
 ## Investigate devcontainer security concerns, both under VS Code and GitHub Codespaces
 
 ## Investigate a Codespaces-specific firewall ruleset that doesn't block internal communication

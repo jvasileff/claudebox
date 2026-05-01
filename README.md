@@ -135,6 +135,13 @@ development impractical.
    IPv6 is blocked, and the image configures `/etc/gai.conf` to prefer IPv4
    address selection so clients do not try unreachable AAAA records first.
 
+   To allow one private destination through (e.g. a local Ollama server),
+   set `FIREWALL_ALLOWED_DEST=hostname_or_ip:port` in the container's
+   environment. The hostname is resolved at firewall setup and a single
+   ACCEPT rule is added before the private-IP block. This is an explicit,
+   user-opted hole in the firewall — anything reachable at that host:port
+   is reachable from inside the sandbox.
+
 2. **Privilege isolation** (build time + runtime): all SUID/SGID bits stripped
    except sudo; sudo is configured to allow only `/usr/local/libexec/init-firewall.sh`
    as root — no other privilege escalation path exists.

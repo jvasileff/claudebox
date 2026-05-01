@@ -21,6 +21,24 @@ iptables -A OUTPUT -p tcp -d "$DNS_SERVER" --dport 53 -j ACCEPT
 iptables -A INPUT  -p udp -s "$DNS_SERVER" --sport 53 -j ACCEPT
 iptables -A INPUT  -p tcp -s "$DNS_SERVER" --sport 53 -j ACCEPT
 
+# -- Allow specific destination (e.g., OLLAMA) -------------------------
+# Format: HOSTNAME_OR_IP:PORT (e.g., ollama-server:11434)
+if [ -n "${FIREWALL_ALLOWED_DEST:-}" ]; then
+    DEST_HOST=$(echo "$FIREWALL_ALLOWED_DEST" | cut -d':' -f1)
+    DEST_PORT=$(echo "$FIREWALL_ALLOWED_DEST" | cut -d':' -f2)
+
+    if [ -n "$DEST_HOST" ] && [ -n "$DEST_PORT" ]; then
+        # Resolve hostname to IP
+        DEST_IP=$(getent hosts "$DEST_HOST" | awk '{print $1}')
+        if [ -n "$DEST_IP" ]; then
+            iptables -A OUTPUT -p tcp -d "$DEST_IP" --dport "$DEST_PORT" -j ACCEPT
+        else
+            # Fallback to treating it as an IP if getent fails (e.g. if it's already an IP)
+            iptables -A OUTPUT -p tcp -d "$DEST_HOST" --dport "$DEST_PORT" -j ACCEPT
+        fi
+    fi
+fi
+
 # -- Block all private/local IP ranges --------------------------------
 # This prevents access to: the Docker host, other containers,
 # LAN services, and cloud metadata endpoints (169.254.169.254).

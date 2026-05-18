@@ -110,7 +110,8 @@ RUN ln -s pip /home/coder/.local/bin/pip3 \
 
 # -- Install Go -------------------------------------------------------
 RUN GOVERSION=$(curl -fsSL https://go.dev/VERSION?m=text | head -1) && \
-    curl -fsSL "https://go.dev/dl/${GOVERSION}.linux-amd64.tar.gz" | tar -C /usr/local -xz
+    GOARCH=$(dpkg --print-architecture) && \
+    curl -fsSL "https://go.dev/dl/${GOVERSION}.linux-${GOARCH}.tar.gz" | tar -C /usr/local -xz
 
 # -- Install Rust via rustup ------------------------------------------
 RUN su - coder -c "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"

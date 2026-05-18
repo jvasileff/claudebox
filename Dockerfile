@@ -1,9 +1,12 @@
 FROM debian:trixie-slim AS sqlite3_builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc make wget ca-certificates \
-    libreadline-dev zlib1g-dev && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends \
+        gcc make wget ca-certificates \
+        libreadline-dev zlib1g-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 ARG SQLITE_VERSION=3530000
 ARG SQLITE_YEAR=2026
@@ -47,9 +50,9 @@ ARG CACHE_BUSTER=2026-04
 # gnupg2:             GPG for git signing and package verification
 # libreadline8t64:    for sqlite3
 # ripgrep bubblewrap socat: required for claude code sandbox
-RUN apt-get update
-RUN apt-get upgrade -y
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends \
         sudo iptables iproute2 zip unzip curl ca-certificates \
         git vim tmux lsof dnsutils bash-completion zsh \
         gcc zlib1g-dev gh jq fzf less procps gnupg2 age \
@@ -119,8 +122,10 @@ RUN su - coder -c "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | s
 ARG AI_CACHE_BUSTER=2026-04-06
 
 # -- Daily OS security patches ----------------------------------------
-RUN apt-get update && apt-get upgrade -y \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # -- Install Claude Code (native installer) ---------------------------
 RUN su - coder -c "curl -fsSL https://claude.ai/install.sh | bash"

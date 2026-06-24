@@ -1,5 +1,5 @@
 [ -n "${SHELL_ENV_LOADED:-}" ] && return
-SHELL_ENV_LOADED=1
+export SHELL_ENV_LOADED=1
 
 export PATH="$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/go/bin:$HOME/.nix-profile/bin:$PATH"
 

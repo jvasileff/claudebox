@@ -54,13 +54,14 @@ RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
         sudo iptables iproute2 zip unzip curl ca-certificates \
-        git vim tmux lsof dnsutils bash-completion zsh \
+        man git vim tmux lsof dnsutils bash-completion zsh \
         gcc zlib1g-dev gh jq fzf less procps gnupg2 age \
         openssh-client iputils-ping rsync file wget \
         ripgrep fd-find bat tree just bc gawk \
         tzdata locales \
         libreadline8t64 \
         bubblewrap socat \
+        nix \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen \
@@ -140,6 +141,11 @@ RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g \
     @mariozechner/pi-coding-agent \
     @mariozechner/pi-mom \
     @mariozechner/pi-tui"
+
+# configure nix for single-user use
+RUN echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
+RUN echo "build-users-group =" >> /etc/nix/nix.conf
+RUN chown -R coder:coder /nix
 
 # -- Volume mount points -----------------------------------------------
 # Pre-create as coder:coder so Docker honours ownership for new volumes.

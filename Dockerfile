@@ -177,6 +177,7 @@ RUN find / -xdev -perm /6000 -type f ! -path /usr/bin/sudo \
 # The guard variable in dot.shell_env prevents double-init.
 COPY home/dot.gitconfig /etc/skel/.gitconfig
 COPY home/dot.claude.settings.json /etc/skel/.claude/settings.json
+COPY home/dot.claude.statusline.sh /etc/skel/.claude/statusline.sh
 COPY --chown=coder:coder home/dot.shell_env /home/coder/.shell_env
 COPY --chown=coder:coder home/dot.zshenv /home/coder/.zshenv
 RUN cat >> /home/coder/.bashrc <<'EOF'

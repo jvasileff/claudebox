@@ -3,8 +3,12 @@
     "type": "command",
     "command": "~/.claude/statusline.sh"
   },
+  "tui": "fullscreen",
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "auto",
   "env": {
     "DISABLE_ERROR_REPORTING": "1",
-    "DISABLE_AUTOUPDATER": "1"
+    "DISABLE_AUTOUPDATER": "1",
+    "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY": "1"
   }
 }

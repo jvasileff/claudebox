@@ -10,7 +10,49 @@ env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/claudebox
 
 jobs:
+  # Resolve tool versions once so both arch builds use identical pins
+  # (and so unchanged tools produce identical cache keys night to night).
+  versions:
+    runs-on: ubuntu-latest
+    outputs:
+      cache_buster: ${{ steps.resolve.outputs.cache_buster }}
+      ai_cache_buster: ${{ steps.resolve.outputs.ai_cache_buster }}
+      claude_version: ${{ steps.resolve.outputs.claude_version }}
+      codex_version: ${{ steps.resolve.outputs.codex_version }}
+      pi_versions: ${{ steps.resolve.outputs.pi_versions }}
+    steps:
+      - name: Resolve tool versions
+        id: resolve
+        run: |
+          set -euo pipefail
+
+          claude_version=$(curl -fsSL https://downloads.claude.ai/claude-code-releases/stable)
+          echo "$claude_version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+' \
+            || { echo "unexpected claude version: $claude_version" >&2; exit 1; }
+
+          codex_version=$(npm view @openai/codex version)
+
+          pi_versions=""
+          for p in pi-ai pi-agent-core pi-coding-agent pi-mom pi-tui; do
+            pi_versions="$pi_versions$p@$(npm view "@mariozechner/$p" version) "
+          done
+
+          {
+            echo "cache_buster=$(date +%Y-%m)"
+            echo "ai_cache_buster=$(date +%Y-%m-%d)"
+            echo "claude_version=$claude_version"
+            echo "codex_version=$codex_version"
+            echo "pi_versions=${pi_versions% }"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Show resolved versions
+        run: |
+          echo "claude: ${{ steps.resolve.outputs.claude_version }}"
+          echo "codex:  ${{ steps.resolve.outputs.codex_version }}"
+          echo "pi:     ${{ steps.resolve.outputs.pi_versions }}"
+
   build:
+    needs: versions
     strategy:
       matrix:
         include:
@@ -35,24 +77,41 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Compute build args
-        id: args
-        run: |
-          echo "cache_buster=$(date +%Y-%m)" >> $GITHUB_OUTPUT
-          echo "ai_cache_buster=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
-
-      - name: Build and push
+      # base: all software, no sandbox setup
+      - name: Build and push base image
         uses: docker/build-push-action@v7
         with:
           context: ./context
           file: ./Dockerfile
+          target: base
+          push: true
+          tags: ${{ env.IMAGE }}:base-${{ matrix.platform }}
+          cache-from: type=registry,ref=${{ env.IMAGE }}:cache-${{ matrix.platform }}
+          build-args: |
+            CACHE_BUSTER=${{ needs.versions.outputs.cache_buster }}
+            AI_CACHE_BUSTER=${{ needs.versions.outputs.ai_cache_buster }}
+            CLAUDE_VERSION=${{ needs.versions.outputs.claude_version }}
+            CODEX_VERSION=${{ needs.versions.outputs.codex_version }}
+            PI_VERSIONS=${{ needs.versions.outputs.pi_versions }}
+
+      # sandbox: base + firewall, hardening, entrypoint
+      # cache-to only here: mode=max also exports the earlier stages.
+      - name: Build and push sandbox image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./context
+          file: ./Dockerfile
+          target: sandbox
           push: true
           tags: ${{ env.IMAGE }}:latest-${{ matrix.platform }}
           cache-from: type=registry,ref=${{ env.IMAGE }}:cache-${{ matrix.platform }}
           cache-to: type=registry,ref=${{ env.IMAGE }}:cache-${{ matrix.platform }},mode=max
           build-args: |
-            CACHE_BUSTER=${{ steps.args.outputs.cache_buster }}
-            AI_CACHE_BUSTER=${{ steps.args.outputs.ai_cache_buster }}
+            CACHE_BUSTER=${{ needs.versions.outputs.cache_buster }}
+            AI_CACHE_BUSTER=${{ needs.versions.outputs.ai_cache_buster }}
+            CLAUDE_VERSION=${{ needs.versions.outputs.claude_version }}
+            CODEX_VERSION=${{ needs.versions.outputs.codex_version }}
+            PI_VERSIONS=${{ needs.versions.outputs.pi_versions }}
 
   manifest:
     needs: build
@@ -68,8 +127,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create and push manifest
+      - name: Create and push manifests
         run: |
+          docker buildx imagetools create \
+            -t $IMAGE:base \
+            $IMAGE:base-amd64 \
+            $IMAGE:base-arm64
           docker buildx imagetools create \
             -t $IMAGE:latest \
             $IMAGE:latest-amd64 \

@@ -34,9 +34,13 @@ RUN wget https://www.sqlite.org/${SQLITE_YEAR}/sqlite-autoconf-${SQLITE_VERSION}
     make -j$(nproc) && \
     make install
 
-FROM debian:trixie-slim
+# ======================================================================
+# Stage: toolchain
+# OS packages and language toolchains. Rebuilt monthly (CACHE_BUSTER).
+# ======================================================================
+FROM debian:trixie-slim AS toolchain
 
-ARG CACHE_BUSTER=2026-04
+ARG CACHE_BUSTER=2026-07
 
 # -- Install runtime dependencies -------------------------------------
 # sudo:               scoped privilege escalation for firewall setup only
@@ -61,7 +65,7 @@ RUN apt-get update \
         tzdata locales \
         libreadline8t64 \
         bubblewrap socat \
-        nix \
+        nix shellcheck \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen \
@@ -120,64 +124,15 @@ RUN GOVERSION=$(curl -fsSL https://go.dev/VERSION?m=text | head -1) && \
 # -- Install Rust via rustup ------------------------------------------
 RUN su - coder -c "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
 
-ARG AI_CACHE_BUSTER=2026-04-06
-
-# -- Daily OS security patches ----------------------------------------
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# -- Install Claude Code (native installer) ---------------------------
-RUN su - coder -c "curl -fsSL https://claude.ai/install.sh | bash"
-
-# -- Install OpenAI Codex CLI ------------------------------------------
-RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g @openai/codex"
-
-# -- Install https://github.com/badlogic/pi-mono
-RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g \
-    @mariozechner/pi-ai \
-    @mariozechner/pi-agent-core \
-    @mariozechner/pi-coding-agent \
-    @mariozechner/pi-mom \
-    @mariozechner/pi-tui"
-
 # configure nix for single-user use
 RUN echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
 RUN echo "build-users-group =" >> /etc/nix/nix.conf
 RUN chown -R coder:coder /nix
 
-# -- Volume mount points -----------------------------------------------
-# Pre-create as coder:coder so Docker honours ownership for new volumes.
-# Clear any Claude installer artifacts; only volume data should be here.
-RUN rm -rf /home/coder/.claude \
-    && mkdir -p /home/coder/.claude /home/coder/.codex \
-    && chown coder:coder /home/coder/.claude /home/coder/.codex
-
-# -- Firewall script (must be in place before sudoers references it) --
-COPY libexec/init-firewall.sh /usr/local/libexec/init-firewall.sh
-RUN chown root:root /usr/local/libexec/init-firewall.sh \
-    && chmod 0755 /usr/local/libexec/init-firewall.sh
-
-# -- Configure sudo: coder may only run init-firewall.sh as root ------
-COPY etc/sudoers /etc/sudoers
-RUN chown root:root /etc/sudoers \
-    && chmod 0440 /etc/sudoers
-
-# -- Hardening (build time) -------------------------------------------
-# Strip all SUID/SGID bits from every binary on the system, except sudo.
-# sudo retains its SUID bit so coder can escalate only to run the
-# firewall script (governed by the tightly-scoped sudoers config above).
-RUN find / -xdev -perm /6000 -type f ! -path /usr/bin/sudo \
-        -exec chmod a-s {} + 2>/dev/null; true
-
 # -- Shell environment (nvm, sdkman) for all shell types --------------
 # BASH_ENV is sourced by bash for every non-interactive script.
 # .zshenv is sourced by zsh for every invocation (interactive or not).
 # The guard variable in dot.shell_env prevents double-init.
-COPY home/dot.gitconfig /etc/skel/.gitconfig
-COPY home/dot.claude.settings.json /etc/skel/.claude/settings.json
-COPY home/dot.claude.statusline.sh /etc/skel/.claude/statusline.sh
 COPY --chown=coder:coder home/dot.shell_env /home/coder/.shell_env
 COPY --chown=coder:coder home/dot.zshenv /home/coder/.zshenv
 RUN cat >> /home/coder/.bashrc <<'EOF'
@@ -206,16 +161,111 @@ ENV BASH_ENV=/home/coder/.shell_env
 RUN ln -s /usr/bin/fdfind /usr/local/bin/fd \
     && ln -s /usr/bin/batcat /usr/local/bin/bat
 
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+
+ENV UV_SYSTEM_PYTHON=1
+
+# ======================================================================
+# Stage: base
+# Adds AI coding tools and daily OS security patches. Published as
+# ghcr.io/.../claudebox:base — fully usable, without the sandbox setup.
+#
+# Tool version ARGs: the defaults install the latest release, so a
+# standalone `docker build` needs no arguments. CI passes exact resolved
+# versions so that unchanged tools are cache hits (identical layers,
+# nothing to re-pull nightly). Tools are installed least-frequently to
+# most-frequently released, so frequent releases (claude, near-daily)
+# don't invalidate the larger, rarely-changing layers above them.
+# ======================================================================
+FROM toolchain AS base
+
+# -- Install https://github.com/badlogic/pi-mono ----------------------
+ARG PI_VERSIONS="pi-ai pi-agent-core pi-coding-agent pi-mom pi-tui"
+RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g $(printf '@mariozechner/%s ' $PI_VERSIONS)"
+
+# -- Install OpenAI Codex CLI ------------------------------------------
+ARG CODEX_VERSION=latest
+RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g @openai/codex@${CODEX_VERSION}"
+
+# -- Install Claude Code (native installer) ---------------------------
+# The installer accepts stable|latest|X.Y.Z as its target argument.
+ARG CLAUDE_VERSION=stable
+RUN su - coder -c "curl -fsSL https://claude.ai/install.sh | bash -s -- ${CLAUDE_VERSION}"
+
+ENV CLAUDE_CONFIG_DIR=/home/coder/.claude
+
+# -- Daily OS security patches ----------------------------------------
+# Last among the daily steps: its nightly churn must not invalidate the
+# tool layers above.
+ARG AI_CACHE_BUSTER=2026-07-06
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# -- Convenience sudo (this image only) --------------------------------
+# Passwordless sudo for coder, as is conventional for dev images. The
+# sandbox stage deletes this drop-in and replaces /etc/sudoers with a
+# firewall-only rule.
+RUN echo "coder ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/coder \
+    && chmod 0440 /etc/sudoers.d/coder \
+    && visudo -c
+
+USER coder
+WORKDIR /workspaces/project
+
+CMD ["/bin/bash"]
+
+# ======================================================================
+# Stage: sandbox
+# Firewall, privilege hardening, and container init. Published as
+# ghcr.io/.../claudebox:latest.
+# ======================================================================
+FROM base AS sandbox
+
+USER root
+
+# -- Volume mount points -----------------------------------------------
+# Pre-create as coder:coder so Docker honours ownership for new volumes.
+# Clear any Claude installer artifacts; only volume data should be here.
+RUN rm -rf /home/coder/.claude \
+    && mkdir -p /home/coder/.claude /home/coder/.codex \
+    && chown coder:coder /home/coder/.claude /home/coder/.codex
+
+# -- Firewall script (must be in place before sudoers references it) --
+COPY libexec/init-firewall.sh /usr/local/libexec/init-firewall.sh
+RUN chown root:root /usr/local/libexec/init-firewall.sh \
+    && chmod 0755 /usr/local/libexec/init-firewall.sh
+
+# -- Configure sudo: coder may only run init-firewall.sh as root ------
+# The base image's convenience grant must not survive into the sandbox:
+# delete the drop-in (rm without -f: fail the build if it ever moves)
+# and replace /etc/sudoers wholesale (it has no @includedir, so nothing
+# under /etc/sudoers.d is consulted even if a file slips through).
+COPY etc/sudoers /etc/sudoers
+RUN rm /etc/sudoers.d/coder \
+    && chown root:root /etc/sudoers \
+    && chmod 0440 /etc/sudoers
+
+# -- Hardening (build time) -------------------------------------------
+# Strip all SUID/SGID bits from every binary on the system, except sudo.
+# sudo retains its SUID bit so coder can escalate only to run the
+# firewall script (governed by the tightly-scoped sudoers config above).
+# Must run after the daily apt upgrade in the base stage: upgraded
+# packages reinstall their SUID bits.
+RUN find / -xdev -perm /6000 -type f ! -path /usr/bin/sudo \
+        -exec chmod a-s {} + 2>/dev/null; true
+
+# -- Default config, copied into $HOME at runtime by container-init ---
+COPY home/dot.gitconfig /etc/skel/.gitconfig
+COPY home/dot.claude.settings.json /etc/skel/.claude/settings.json
+COPY home/dot.claude.statusline.sh /etc/skel/.claude/statusline.sh
+
 # -- Entrypoint and container init ------------------------------------
 COPY libexec/container-init.sh /usr/local/libexec/container-init.sh
 COPY libexec/entrypoint.sh /usr/local/libexec/entrypoint.sh
 RUN chmod +x /usr/local/libexec/container-init.sh /usr/local/libexec/entrypoint.sh
-
-ENV LANG=en_US.UTF-8
-ENV LC_ALL=en_US.UTF-8
-
-ENV CLAUDE_CONFIG_DIR=/home/coder/.claude
-ENV UV_SYSTEM_PYTHON=1
 
 # -- Prefer IPv4 address selection ------------------------------------
 # The firewall explicitly blocks IPv6. Prefer IPv4 in getaddrinfo so
@@ -223,7 +273,6 @@ ENV UV_SYSTEM_PYTHON=1
 RUN printf 'precedence ::ffff:0:0/96  100\n' >> /etc/gai.conf
 
 USER coder
-WORKDIR /workspaces/project
 
 ENTRYPOINT ["/usr/local/libexec/entrypoint.sh"]
 CMD ["/bin/bash"]

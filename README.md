@@ -12,12 +12,42 @@ Minimal Docker sandbox for running Claude Code with network isolation.
   run the firewall setup script
 - If the firewall fails to initialize, the container refuses to start
 
+## Images
+
+Two images are published to ghcr.io nightly:
+
+- **`ghcr.io/jvasileff/claudebox:latest`** — the sandbox. Firewall,
+  firewall-only sudo, SUID bits stripped, entrypoint that refuses to
+  start without network isolation.
+- **`ghcr.io/jvasileff/claudebox:base`** — everything except the sandbox
+  setup: the same toolchains and AI CLIs, with the `coder` user (uid 1000)
+  granted passwordless sudo, and no firewall or entrypoint. Useful as a
+  general-purpose dev image or as a parent for custom images.
+
+The Dockerfile builds three stages:
+
+| Stage | Adds | Published as |
+|-------|------|--------------|
+| `toolchain` | Debian + dev tools, Node (nvm), Java (sdkman), Python (uv), Go, Rust, nix | — |
+| `base` | Claude Code, Codex, pi-mono; daily OS security patches; passwordless sudo | `:base` |
+| `sandbox` | firewall, firewall-only sudoers, SUID strip, entrypoint | `:latest` |
+
+CI resolves the current tool versions (Claude Code stable channel, npm
+registry) and passes them as build args, so layers for unchanged tools
+stay identical night to night and pulls download only what actually
+changed. Local builds need no build args — the version ARGs default to
+latest/stable.
+
 ## Usage
 
 ### Build from source
 
 ```bash
+# sandbox image (default — the final stage)
 docker build -f Dockerfile -t claudebox context
+
+# base image only (no sandbox setup)
+docker build -f Dockerfile --target base -t claudebox:base context
 ```
 
 ### Shell functions

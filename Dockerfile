@@ -212,7 +212,13 @@ ENV CLAUDE_CONFIG_DIR=/home/coder/.claude
 # /etc/skel — the same clean slate the sandbox gets — rather than our
 # config merged over the Claude installer's default artifacts. Safe
 # because the claude launcher lives in ~/.local/bin, not ~/.claude.
+# dot.claude.claude.json seeds ~/.claude/.claude.json with
+# hasCompletedOnboarding, which suppresses the first-run onboarding
+# (theme picker etc). It lands in CLAUDE_CONFIG_DIR because this Claude
+# version redirects .claude.json there; claude read-modify-writes the
+# rest of its state onto it on first launch.
 COPY --chown=coder:coder             home/dot.gitconfig             /etc/skel/.gitconfig
+COPY --chown=coder:coder             home/dot.claude.claude.json    /etc/skel/.claude/.claude.json
 COPY --chown=coder:coder             home/dot.claude.settings.json  /etc/skel/.claude/settings.json
 COPY --chown=coder:coder --chmod=755 home/dot.claude.statusline.sh  /etc/skel/.claude/statusline.sh
 RUN su - coder -c "cp -a /etc/skel/.gitconfig ~/.gitconfig \

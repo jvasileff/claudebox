@@ -43,3 +43,15 @@ codexbox() {
     fi
     _claudebox_run codexbox .codex "$@"
 }
+
+# Run the unsandboxed base image. Options before `--` go to docker (e.g.
+# volume mounts); anything after `--` is the command run in the container:
+#   cboxbase -v ~/data:/data -- bash -lc 'echo hi'
+cboxbase() {
+    local -a opts=()
+    while [[ $# -gt 0 && $1 != -- ]]; do opts+=("$1"); shift; done
+    [[ $1 == -- ]] && shift
+    echo "Pulling latest image..." >&2
+    docker pull --quiet ghcr.io/jvasileff/claudebox:base 2>/dev/null || true
+    docker run --rm -it "${opts[@]}" ghcr.io/jvasileff/claudebox:base "$@"
+}

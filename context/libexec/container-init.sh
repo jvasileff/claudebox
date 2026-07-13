@@ -35,17 +35,25 @@ else
     sudo /usr/local/libexec/init-firewall.sh
 fi
 
-# -- Git config -------------------------------------------------------
-# In a dev container, VS Code injects its own .gitconfig (host credentials,
-# signing config, etc). Only install our default when not in that context.
-if [ -z "${DEVCONTAINER:-}" ] && [ ! -f "$HOME/.gitconfig" ]; then
-    cp /etc/skel/.gitconfig "$HOME/.gitconfig"
-fi
-
-# -- Claude Code default settings -------------------------------------
-if [ ! -f "$HOME/.claude/settings.json" ]; then
-    cp /etc/skel/.claude/settings.json "$HOME/.claude/settings.json"
-fi
+# -- Seed default config from /etc/skel -------------------------------
+# Copy any missing skel file into $HOME, preserving modes (so the
+# statusline script keeps its exec bit). This is volume-agnostic: it
+# does not need to know which paths are volume mounts — whatever a fresh
+# mount leaves empty gets seeded, while existing files are left untouched
+# so user edits are never overwritten.
+#
+# Exception: in a dev container, VS Code injects its own .gitconfig (host
+# credentials, signing config, etc), so never install our default there.
+while IFS= read -r -d '' src; do
+    rel=${src#/etc/skel/}
+    dest="$HOME/$rel"
+    if [ "$rel" = ".gitconfig" ] && [ -n "${DEVCONTAINER:-}" ]; then
+        continue
+    fi
+    [ -e "$dest" ] && continue
+    mkdir -p "$(dirname "$dest")"
+    cp -a "$src" "$dest"
+done < <(find /etc/skel -type f -print0)
 
 # -- Java version selection -------------------------------------------
 JAVA_VERSION_FILE="/workspaces/project/.java-version"

@@ -199,6 +199,26 @@ RUN su - coder -c "curl -fsSL https://claude.ai/install.sh | bash -s -- ${CLAUDE
 
 ENV CLAUDE_CONFIG_DIR=/home/coder/.claude
 
+# -- Default config templates -----------------------------------------
+# Canonical defaults live in /etc/skel (inherited by the sandbox stage,
+# which seeds them into $HOME at runtime because it mounts ~/.claude as a
+# volume that would shadow anything baked there). Here in base nothing
+# shadows $HOME, so bake our files straight in so the image is usable as
+# is. Only our own files are copied (not all of /etc/skel) so the
+# toolchain's customized ~/.bashrc and ~/.profile stay intact; cp -a
+# preserves modes, including the statusline script's exec bit.
+#
+# ~/.claude is wiped before baking so its config comes solely from
+# /etc/skel — the same clean slate the sandbox gets — rather than our
+# config merged over the Claude installer's default artifacts. Safe
+# because the claude launcher lives in ~/.local/bin, not ~/.claude.
+COPY --chown=coder:coder             home/dot.gitconfig             /etc/skel/.gitconfig
+COPY --chown=coder:coder             home/dot.claude.settings.json  /etc/skel/.claude/settings.json
+COPY --chown=coder:coder --chmod=755 home/dot.claude.statusline.sh  /etc/skel/.claude/statusline.sh
+RUN su - coder -c "cp -a /etc/skel/.gitconfig ~/.gitconfig \
+    && rm -rf ~/.claude && mkdir -p ~/.claude \
+    && cp -a /etc/skel/.claude/. ~/.claude/"
+
 # -- Daily OS security patches ----------------------------------------
 # Last among the daily steps: its nightly churn must not invalidate the
 # tool layers above.
@@ -232,8 +252,12 @@ USER root
 
 # -- Volume mount points -----------------------------------------------
 # Pre-create as coder:coder so Docker honours ownership for new volumes.
-# Clear any Claude installer artifacts; only volume data should be here.
-RUN rm -rf /home/coder/.claude \
+# Clear the baked ~/.claude (installer artifacts + baked defaults); only
+# volume data belongs here, and container-init re-seeds the defaults from
+# /etc/skel at runtime. Drop the baked ~/.gitconfig too, so the runtime
+# seed — which skips it under DEVCONTAINER — governs whether the default
+# git config is installed.
+RUN rm -rf /home/coder/.claude /home/coder/.gitconfig \
     && mkdir -p /home/coder/.claude /home/coder/.codex \
     && chown coder:coder /home/coder/.claude /home/coder/.codex
 
@@ -260,11 +284,6 @@ RUN rm /etc/sudoers.d/coder \
 # packages reinstall their SUID bits.
 RUN find / -xdev -perm /6000 -type f ! -path /usr/bin/sudo \
         -exec chmod a-s {} + 2>/dev/null; true
-
-# -- Default config, copied into $HOME at runtime by container-init ---
-COPY home/dot.gitconfig /etc/skel/.gitconfig
-COPY home/dot.claude.settings.json /etc/skel/.claude/settings.json
-COPY home/dot.claude.statusline.sh /etc/skel/.claude/statusline.sh
 
 # -- Entrypoint and container init ------------------------------------
 COPY libexec/container-init.sh /usr/local/libexec/container-init.sh

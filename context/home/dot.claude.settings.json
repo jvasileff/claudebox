@@ -6,6 +6,9 @@
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "theme": "auto",
+  "worktree": {
+    "bgIsolation": "none"
+  },
   "env": {
     "DISABLE_ERROR_REPORTING": "1",
     "DISABLE_AUTOUPDATER": "1",

@@ -54,6 +54,9 @@ ARG CACHE_BUSTER=2026-07
 # gnupg2:             GPG for git signing and package verification
 # libreadline8t64:    for sqlite3
 # ripgrep bubblewrap socat: required for claude code sandbox
+# build-essential:    make, g++, headers for building native deps
+# git-delta:          nicer git diff output (delta)
+# moreutils:          sponge, ts, and other pipe utilities
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
@@ -62,6 +65,7 @@ RUN apt-get update \
         gcc zlib1g-dev gh jq fzf less procps gnupg2 age \
         openssh-client iputils-ping rsync file wget \
         ripgrep fd-find bat tree just bc gawk \
+        build-essential git-delta moreutils \
         tzdata locales \
         libreadline8t64 \
         bubblewrap socat \

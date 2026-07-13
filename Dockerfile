@@ -199,6 +199,17 @@ RUN su - coder -c "curl -fsSL https://claude.ai/install.sh | bash -s -- ${CLAUDE
 
 ENV CLAUDE_CONFIG_DIR=/home/coder/.claude
 
+# -- Strip build-time identity from the installer's ~/.claude.json ----
+# The native installer records installMethod/autoUpdates here (which
+# `claude update` relies on), but also bakes a machineID/userID/
+# firstStartTime generated at build time. Those are per-machine
+# identifiers that must not be shared across every container spawned
+# from the image, so drop them; claude regenerates fresh ones on first
+# run. (Same clean-slate reasoning as the ~/.claude wipe below.)
+RUN su - coder -c 'if [ -f ~/.claude.json ]; then \
+        jq "del(.machineID, .userID, .firstStartTime)" ~/.claude.json | sponge ~/.claude.json; \
+    fi'
+
 # -- Default config templates -----------------------------------------
 # Canonical defaults live in /etc/skel (inherited by the sandbox stage,
 # which seeds them into $HOME at runtime because it mounts ~/.claude as a

@@ -224,10 +224,11 @@ RUN su - coder -c 'if [ -f ~/.claude.json ]; then \
 # config merged over the Claude installer's default artifacts. Safe
 # because the claude launcher lives in ~/.local/bin, not ~/.claude.
 # dot.claude.claude.json seeds ~/.claude/.claude.json with
-# hasCompletedOnboarding, which suppresses the first-run onboarding
-# (theme picker etc). It lands in CLAUDE_CONFIG_DIR because this Claude
-# version redirects .claude.json there; claude read-modify-writes the
-# rest of its state onto it on first launch.
+# hasCompletedOnboarding (suppresses the first-run theme/onboarding
+# wizard) and pre-accepts the folder-trust dialog for the fixed
+# /workspaces/project workspace. It lands in CLAUDE_CONFIG_DIR because
+# this Claude version redirects .claude.json there; claude
+# read-modify-writes the rest of its state onto it on first launch.
 COPY --chown=coder:coder             home/dot.gitconfig             /etc/skel/.gitconfig
 COPY --chown=coder:coder             home/dot.claude.claude.json    /etc/skel/.claude/.claude.json
 COPY --chown=coder:coder             home/dot.claude.settings.json  /etc/skel/.claude/settings.json

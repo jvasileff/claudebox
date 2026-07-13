@@ -113,6 +113,26 @@ jobs:
             CODEX_VERSION=${{ needs.versions.outputs.codex_version }}
             PI_VERSIONS=${{ needs.versions.outputs.pi_versions }}
 
+      # sync-auth: base + credentials installer (see cbox-sync-auth).
+      # No cache-to: the sandbox step owns the cache ref (a mode=max
+      # export here would evict the sandbox layers from it), and this
+      # stage's own layers are trivial to rebuild.
+      - name: Build and push sync-auth image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./context
+          file: ./Dockerfile
+          target: sync-auth
+          push: true
+          tags: ${{ env.IMAGE }}:sync-auth-${{ matrix.platform }}
+          cache-from: type=registry,ref=${{ env.IMAGE }}:cache-${{ matrix.platform }}
+          build-args: |
+            CACHE_BUSTER=${{ needs.versions.outputs.cache_buster }}
+            AI_CACHE_BUSTER=${{ needs.versions.outputs.ai_cache_buster }}
+            CLAUDE_VERSION=${{ needs.versions.outputs.claude_version }}
+            CODEX_VERSION=${{ needs.versions.outputs.codex_version }}
+            PI_VERSIONS=${{ needs.versions.outputs.pi_versions }}
+
   manifest:
     needs: build
     runs-on: ubuntu-latest
@@ -137,6 +157,10 @@ jobs:
             -t $IMAGE:latest \
             $IMAGE:latest-amd64 \
             $IMAGE:latest-arm64
+          docker buildx imagetools create \
+            -t $IMAGE:sync-auth \
+            $IMAGE:sync-auth-amd64 \
+            $IMAGE:sync-auth-arm64
 
       # prevent GitHub disabling scheduled workflow after 60 days of repo inactivity
       - name: Keepalive

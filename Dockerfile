@@ -260,6 +260,37 @@ WORKDIR /workspaces/project
 CMD ["/bin/bash"]
 
 # ======================================================================
+# Stage: sync-auth
+# Single-purpose helper behind the cbox-sync-auth shell function: reads
+# Claude credentials JSON on stdin, validates it, and installs it into
+# the ~/.claude volume. Published as ghcr.io/.../claudebox:sync-auth.
+# Needs no network — cbox-sync-auth runs it with --network=none.
+# ======================================================================
+FROM base AS sync-auth
+
+USER root
+
+# ~/.claude is a volume mount point here, so clear the config baked into
+# base: when the engine creates a brand-new volume it copies the mount
+# point's image content in, and a volume created by this image must
+# receive only the credentials file — seeding the defaults stays the job
+# of container-init on the project's first real run. Pre-create as
+# coder:coder so the engine honours ownership for new volumes.
+RUN rm -rf /home/coder/.claude \
+    && mkdir -p /home/coder/.claude \
+    && chown coder:coder /home/coder/.claude
+
+COPY libexec/sync-auth.py /usr/local/libexec/sync-auth.py
+
+USER coder
+
+# uv resolves the pre-baked interpreter; forbid network lookups outright
+# since the container runs with --network=none anyway.
+ENV UV_OFFLINE=1
+
+ENTRYPOINT ["/home/coder/.local/bin/uv", "run", "--no-project", "python", "/usr/local/libexec/sync-auth.py"]
+
+# ======================================================================
 # Stage: sandbox
 # Firewall, privilege hardening, and container init. Published as
 # ghcr.io/.../claudebox:latest.

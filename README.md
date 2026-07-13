@@ -14,7 +14,7 @@ Minimal Docker sandbox for running Claude Code with network isolation.
 
 ## Images
 
-Two images are published to ghcr.io nightly:
+Three images are published to ghcr.io nightly:
 
 - **`ghcr.io/jvasileff/claudebox:latest`** — the sandbox. Firewall,
   firewall-only sudo, SUID bits stripped, entrypoint that refuses to
@@ -23,13 +23,18 @@ Two images are published to ghcr.io nightly:
   setup: the same toolchains and AI CLIs, with the `coder` user (uid 1000)
   granted passwordless sudo, and no firewall or entrypoint. Useful as a
   general-purpose dev image or as a parent for custom images.
+- **`ghcr.io/jvasileff/claudebox:sync-auth`** — a single-purpose helper
+  behind the `cbox-sync-auth` shell function: validates Claude credentials
+  received on stdin and installs them into a project volume. Runs with
+  `--network=none`. Built on `base`, so it shares its layers.
 
-The Dockerfile builds three stages:
+The Dockerfile builds four stages:
 
 | Stage | Adds | Published as |
 |-------|------|--------------|
 | `toolchain` | Debian + dev tools, Node (nvm), Java (sdkman), Python (uv), Go, Rust, nix | — |
 | `base` | Claude Code, Codex, pi-mono; daily OS security patches; passwordless sudo | `:base` |
+| `sync-auth` | credentials installer entrypoint, cleared `~/.claude` mount point | `:sync-auth` |
 | `sandbox` | firewall, firewall-only sudoers, SUID strip, entrypoint | `:latest` |
 
 CI resolves the current tool versions (Claude Code stable channel, npm
@@ -72,7 +77,48 @@ is also passed via `TZ`.
 
 The volume name is derived from the project's basename and a hash of its real path
 (symlinks resolved), e.g. `claude-myproject-a3f2b1c4`. Each project gets its own
-isolated Claude auth and memory.
+isolated Claude auth and memory. To skip the per-project `/login`, copy existing
+credentials in with `cbox-sync-auth` (below).
+
+### Syncing Claude credentials
+
+A brand-new project volume starts unauthenticated. From the project directory,
+`cbox-sync-auth` copies existing Claude credentials into that project's volume
+so no `/login` is needed:
+
+```bash
+cd ~/src/myproject
+cbox-sync-auth
+```
+
+The default source is the host's own Claude Code login: the macOS keychain
+(the "Claude Code-credentials" item), falling back to
+`~/.claude/.credentials.json`. Credentials can also be supplied explicitly:
+
+```bash
+cbox-sync-auth --file work-creds.json   # a credentials JSON file
+cbox-sync-auth -                        # stdin (paste, Enter, ctrl-d)
+cbox-sync-auth --print                  # dump host credentials to stdout
+```
+
+`--print` and `-` compose for remote machines, where the keychain is not
+available (it cannot be unlocked or approved from an ssh session):
+
+```bash
+cbox-sync-auth --print | ssh worker 'cd ~/proj && cbox-sync-auth -'
+```
+
+The credentials are piped over stdin into a short-lived `:sync-auth` container
+running with `--network=none`; they never appear in command-line arguments,
+environment variables, or storage shared between sandboxes. Sharing stays a
+per-project, per-invocation decision — there is no always-on credential store.
+
+Only `.credentials.json` is written. Claude Code rebuilds the rest of its
+account state (`oauthAccount` in `.claude.json`) from the API at startup, and
+refreshes an expired access token from the refresh token. Running
+`cbox-sync-auth` before a project's first `cbox` is fine: the volume is created
+containing only the credentials file, and `container-init.sh` seeds everything
+else on the first real run.
 
 ### What the flags do
 

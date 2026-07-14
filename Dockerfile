@@ -217,7 +217,7 @@ RUN su - coder -c 'if [ -f ~/.claude.json ]; then \
 # shadows $HOME, so bake our files straight in so the image is usable as
 # is. Only our own files are copied (not all of /etc/skel) so the
 # toolchain's customized ~/.bashrc and ~/.profile stay intact; cp -a
-# preserves modes, including the statusline script's exec bit.
+# preserves modes.
 #
 # ~/.claude is wiped before baking so its config comes solely from
 # /etc/skel — the same clean slate the sandbox gets — rather than our
@@ -232,7 +232,13 @@ RUN su - coder -c 'if [ -f ~/.claude.json ]; then \
 COPY --chown=coder:coder             home/dot.gitconfig             /etc/skel/.gitconfig
 COPY --chown=coder:coder             home/dot.claude.claude.json    /etc/skel/.claude/.claude.json
 COPY --chown=coder:coder             home/dot.claude.settings.json  /etc/skel/.claude/settings.json
-COPY --chown=coder:coder --chmod=755 home/dot.claude.statusline.sh  /etc/skel/.claude/statusline.sh
+# Statusline script: baked to a non-volume path so it is always fresh from the
+# image (no runtime sync); statusLine.command in settings.json points here.
+COPY --chmod=0755                    libexec/claude-statusline.sh   /usr/local/libexec/claude-statusline.sh
+# Enforced policy (auto-updater, release channel, telemetry) at the system
+# managed-settings path — highest precedence, above the ~/.claude volume, so it
+# is always fresh and can never go stale on an existing volume.
+COPY --chmod=0644                    etc/claude-code/managed-settings.json  /etc/claude-code/managed-settings.json
 RUN su - coder -c "cp -a /etc/skel/.gitconfig ~/.gitconfig \
     && rm -rf ~/.claude && mkdir -p ~/.claude \
     && cp -a /etc/skel/.claude/. ~/.claude/"

@@ -55,6 +55,52 @@ while IFS= read -r -d '' src; do
     cp -a "$src" "$dest"
 done < <(find /etc/skel -type f -print0)
 
+# -- Reconcile settings.json with updated skel defaults ---------------
+# The seed loop only fills MISSING files, so an existing volume never picks up
+# changed or added skel defaults. Three-way merge the live file against the
+# current defaults, using a baseline (the skel defaults as of the last sync,
+# stored in the volume): adopt new/changed defaults where the user has not
+# diverged, always keep genuine user edits. Fail closed — on any invalid JSON
+# or jq error, leave the user's file untouched.
+SKEL_SETTINGS=/etc/skel/.claude/settings.json
+LIVE_SETTINGS="$HOME/.claude/settings.json"
+BASELINE="$HOME/.claude/.settings-baseline.json"
+# shellcheck disable=SC2016  # jq program: $b/$n/$c/$k are jq vars, not shell
+M3='
+def m3($b; $n; $c):
+  reduce ([$b, $n, $c] | add | keys_unsorted[]) as $k ({};
+    if ($b[$k]|type) == "object" and ($n[$k]|type) == "object" and ($c[$k]|type) == "object"
+    then .[$k] = m3($b[$k]; $n[$k]; $c[$k])
+    elif (($c|has($k)) == ($b|has($k))) and $c[$k] == $b[$k]
+    then if ($n|has($k)) then .[$k] = $n[$k] else . end
+    else if ($c|has($k)) then .[$k] = $c[$k] else . end
+    end);
+m3(($b[0] // {}); ($n[0] // {}); ($c[0] // {}))
+'
+if [ -f "$SKEL_SETTINGS" ] && [ -f "$LIVE_SETTINGS" ]; then
+    base_tmp=$(mktemp "$HOME/.claude/.settings-base.XXXXXX")
+    if [ -f "$BASELINE" ]; then
+        cp "$BASELINE" "$base_tmp"
+    else
+        echo '{}' > "$base_tmp"          # first run: no baseline yet
+    fi
+    # Skip unless the defaults actually changed since the last sync.
+    if ! cmp -s "$SKEL_SETTINGS" "$base_tmp"; then
+        merged_tmp=$(mktemp "$HOME/.claude/.settings-merge.XXXXXX")
+        if jq -n --slurpfile b "$base_tmp" --slurpfile n "$SKEL_SETTINGS" \
+                --slurpfile c "$LIVE_SETTINGS" "$M3" > "$merged_tmp" 2>/dev/null \
+           && [ -s "$merged_tmp" ]; then
+            mv "$merged_tmp" "$LIVE_SETTINGS"   # atomic (same dir); merged first,
+            cp "$SKEL_SETTINGS" "$BASELINE"     # then advance the baseline
+            log_info "settings.json reconciled with updated defaults"
+        else
+            log_warn "settings merge failed; leaving settings.json untouched"
+            rm -f "$merged_tmp"
+        fi
+    fi
+    rm -f "$base_tmp"
+fi
+
 # -- Java version selection -------------------------------------------
 JAVA_VERSION_FILE="/workspaces/project/.java-version"
 if [ -f "$JAVA_VERSION_FILE" ]; then

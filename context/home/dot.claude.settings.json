@@ -5,6 +5,7 @@
   },
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
+  "switchModelsOnFlag": false,
   "theme": "auto",
   "worktree": {
     "bgIsolation": "none"

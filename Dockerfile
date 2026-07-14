@@ -238,6 +238,7 @@ COPY --chmod=0755                    libexec/claude-statusline.sh   /usr/local/l
 # Enforced policy (auto-updater, release channel, telemetry) at the system
 # managed-settings path — highest precedence, above the ~/.claude volume, so it
 # is always fresh and can never go stale on an existing volume.
+RUN mkdir -p /etc/claude-code && chmod 755 /etc/claude-code
 COPY --chmod=0644                    etc/claude-code/managed-settings.json  /etc/claude-code/managed-settings.json
 RUN su - coder -c "cp -a /etc/skel/.gitconfig ~/.gitconfig \
     && rm -rf ~/.claude && mkdir -p ~/.claude \

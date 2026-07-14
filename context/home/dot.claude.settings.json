@@ -6,6 +6,7 @@
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "switchModelsOnFlag": false,
+  "autoUpdatesChannel": "stable",
   "theme": "auto",
   "worktree": {
     "bgIsolation": "none"

@@ -1,4 +1,5 @@
 {
+  "installMethod": "native",
   "hasCompletedOnboarding": true,
   "projects": {
     "/workspaces/project": {

@@ -62,7 +62,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         sudo iptables iproute2 zip unzip curl ca-certificates \
         man git vim hx tmux lsof dnsutils bash-completion zsh \
-        gcc zlib1g-dev gh jq fzf less procps gnupg2 age \
+        gcc zlib1g-dev gh jq fzf less procps gnupg2 musl-tools age \
         openssh-client iputils-ping rsync file wget \
         ripgrep fd-find bat tree just bc gawk \
         build-essential git-delta moreutils \

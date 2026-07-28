@@ -1,4 +1,5 @@
 {
+  "autoUpdatesChannel": "latest",
   "statusLine": {
     "type": "command",
     "command": "/usr/local/libexec/claude-statusline.sh"

@@ -194,7 +194,7 @@ RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g @openai/codex@${CODEX_VERSION}"
 
 # -- Install Claude Code (native installer) ---------------------------
 # The installer accepts stable|latest|X.Y.Z as its target argument.
-ARG CLAUDE_VERSION=stable
+ARG CLAUDE_VERSION=latest
 RUN su - coder -c "curl -fsSL https://claude.ai/install.sh | bash -s -- ${CLAUDE_VERSION}"
 
 ENV CLAUDE_CONFIG_DIR=/home/coder/.claude
@@ -235,9 +235,9 @@ COPY --chown=coder:coder             home/dot.claude.settings.json  /etc/skel/.c
 # Statusline script: baked to a non-volume path so it is always fresh from the
 # image (no runtime sync); statusLine.command in settings.json points here.
 COPY --chmod=0755                    libexec/claude-statusline.sh   /usr/local/libexec/claude-statusline.sh
-# Enforced policy (auto-updater, release channel, telemetry) at the system
-# managed-settings path — highest precedence, above the ~/.claude volume, so it
-# is always fresh and can never go stale on an existing volume.
+# Enforced policy at the system managed-settings path — highest precedence,
+# above the ~/.claude volume, so it is always fresh and can never go stale on an
+# existing volume. Per-volume defaults belong in ~/.claude/settings.json instead.
 RUN mkdir -p /etc/claude-code && chmod 755 /etc/claude-code
 COPY --chmod=0644                    etc/claude-code/managed-settings.json  /etc/claude-code/managed-settings.json
 RUN su - coder -c "cp -a /etc/skel/.gitconfig ~/.gitconfig \

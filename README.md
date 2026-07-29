@@ -37,11 +37,13 @@ The Dockerfile builds four stages:
 | `sync-auth` | credentials installer entrypoint, cleared `~/.claude` mount point | `:sync-auth` |
 | `sandbox` | firewall, firewall-only sudoers, SUID strip, entrypoint | `:latest` |
 
-CI resolves the current tool versions (Claude Code stable channel, npm
+CI resolves the current tool versions (Claude Code latest channel, npm
 registry) and passes them as build args, so layers for unchanged tools
 stay identical night to night and pulls download only what actually
-changed. Local builds need no build args — the version ARGs default to
-latest/stable.
+changed. Resolving to a concrete version is what busts the tool layers —
+passing a channel name would leave the RUN text unchanged and the cached
+layer would never rebuild. Local builds need no build args — the version
+ARGs default to latest.
 
 ## Usage
 

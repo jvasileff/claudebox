@@ -1,3 +1,7 @@
+# ======================================================================
+# Stage: sqlite3_builder
+# Builds sqlite3 with the compile-time options Debian's package omits.
+# ======================================================================
 FROM debian:trixie-slim AS sqlite3_builder
 
 RUN apt-get update \
@@ -33,6 +37,28 @@ RUN wget https://www.sqlite.org/${SQLITE_YEAR}/sqlite-autoconf-${SQLITE_VERSION}
     ./configure --prefix=/usr/local && \
     make -j$(nproc) && \
     make install
+
+# ======================================================================
+# Stage: issues_builder
+# Builds https://github.com/jvasileff/issues, which publishes tags but no
+# release binaries. Rust comes from rustup rather than apt: issues-cli
+# declares rust-version 1.95, well ahead of trixie's rustc packages.
+# ======================================================================
+FROM debian:trixie-slim AS issues_builder
+
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends \
+        gcc libc6-dev curl ca-certificates \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG ISSUES_VERSION=v0.1.1
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+    && . "$HOME/.cargo/env" \
+    && cargo install --git https://github.com/jvasileff/issues \
+        --tag ${ISSUES_VERSION} --locked --root /opt/issues issues-cli
 
 # ======================================================================
 # Stage: toolchain
@@ -74,10 +100,6 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen \
     && locale-gen
-
-# -- install sqlite3
-COPY --from=sqlite3_builder /usr/local /usr/local
-RUN ldconfig
 
 # -- Create unprivileged user -----------------------------------------
 RUN groupadd -g 1000 coder \
@@ -183,6 +205,11 @@ ENV UV_SYSTEM_PYTHON=1
 # don't invalidate the larger, rarely-changing layers above them.
 # ======================================================================
 FROM toolchain AS base
+
+# -- Install the tools built in the stages above ----------------------
+COPY --from=sqlite3_builder /usr/local /usr/local
+RUN ldconfig
+COPY --from=issues_builder /opt/issues/bin/issues /usr/local/bin/issues
 
 # -- Install https://github.com/badlogic/pi-mono ----------------------
 ARG PI_VERSIONS="pi-ai pi-agent-core pi-coding-agent pi-mom pi-tui"

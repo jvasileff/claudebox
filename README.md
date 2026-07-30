@@ -28,12 +28,14 @@ Three images are published to ghcr.io nightly:
   received on stdin and installs them into a project volume. Runs with
   `--network=none`. Built on `base`, so it shares its layers.
 
-The Dockerfile builds four stages:
+The Dockerfile builds four stages, alongside two builder stages that
+compile sqlite3 and [`issues`](https://github.com/jvasileff/issues) from
+source and contribute only their binaries:
 
 | Stage | Adds | Published as |
 |-------|------|--------------|
 | `toolchain` | Debian + dev tools, Node (nvm), Java (sdkman), Python (uv), Go, Rust, nix | — |
-| `base` | Claude Code, Codex, pi-mono; daily OS security patches; passwordless sudo | `:base` |
+| `base` | sqlite3, `issues`, Claude Code, Codex, pi-mono; daily OS security patches; passwordless sudo | `:base` |
 | `sync-auth` | credentials installer entrypoint, cleared `~/.claude` mount point | `:sync-auth` |
 | `sandbox` | firewall, firewall-only sudoers, SUID strip, entrypoint | `:latest` |
 

@@ -1,3 +1,33 @@
+## The sandbox
+
+Sessions run inside a container. A few of its properties change what is worth
+attempting.
+
+- `/workspaces/project` is a bind mount of a directory on the user's own
+  machine, and the agent's state directory, e.g. `~/.claude` or `~/.codex`, is
+  a persistent volume. Those two paths are the only ones that outlive the
+  session, so treat anything you write, change, or delete in them as
+  permanent: git is the project's only undo, and the state directory has none.
+  Everything else, including `/tmp` and the rest of `$HOME`, is discarded when
+  the container exits.
+- `sudo` is denied apart from one firewall script, so system package installs
+  are unavailable. Nix is available unprivileged for one-off tools; what it
+  installs does not persist.
+- Language toolchains and their version managers are already installed, sdkman
+  and uv among them. Look for what a project needs, and which versions are on
+  disk, before installing anything.
+- Outbound traffic reaches the public internet, while most private and
+  link-local addresses are refused by firewall policy. Host services, other
+  containers, the LAN, and cloud metadata endpoints are generally unreachable,
+  and a refused connection there is the policy working, not a fault to
+  diagnose or route around.
+- No ports are published, so a server started here is reachable from inside
+  the container and nowhere else. Don't send the user to a local URL in their
+  browser.
+
+None of this is exhaustive, and the sandbox changes; ask the container what is
+installed and what it can reach rather than trusting this description.
+
 ## References in code and commits
 
 Comments and commit messages are read later, from checkouts that have none of

@@ -35,7 +35,7 @@ source and contribute only their binaries:
 | Stage | Adds | Published as |
 |-------|------|--------------|
 | `toolchain` | Debian + dev tools, Node (nvm), Java (sdkman), Python (uv), Go, Rust, nix | — |
-| `base` | sqlite3, `issues`, Claude Code, Codex, pi-mono; daily OS security patches; passwordless sudo | `:base` |
+| `base` | sqlite3, `issues`, Claude Code, Codex, pi; daily OS security patches; passwordless sudo | `:base` |
 | `sync-auth` | credentials installer entrypoint, cleared `~/.claude` mount point | `:sync-auth` |
 | `sandbox` | firewall, firewall-only sudoers, SUID strip, entrypoint | `:latest` |
 

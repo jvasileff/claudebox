@@ -216,9 +216,13 @@ COPY --from=issues_builder /opt/issues/bin/issues /usr/local/bin/issues
 # time, and kept in the image so `npm update -g` honours it at runtime.
 COPY --chown=coder:coder home/dot.npmrc /home/coder/.npmrc
 
-# -- Install https://github.com/badlogic/pi-mono ----------------------
-ARG PI_VERSIONS="pi-ai pi-agent-core pi-coding-agent pi-mom pi-tui"
-RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g $(printf '@mariozechner/%s ' $PI_VERSIONS)"
+# -- Install https://github.com/earendil-works/pi ---------------------
+# Only these two carry a bin: pi-coding-agent provides `pi` and pi-ai
+# provides `pi-ai`. pi-agent-core and pi-tui are libraries and arrive as
+# dependencies of pi-coding-agent, so listing them here would add
+# nothing.
+ARG PI_VERSIONS="pi-ai pi-coding-agent"
+RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g $(printf '@earendil-works/%s ' $PI_VERSIONS)"
 
 # -- Install OpenAI Codex CLI ------------------------------------------
 ARG CODEX_VERSION=latest

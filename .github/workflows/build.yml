@@ -36,8 +36,8 @@ jobs:
           codex_version=$(npm view @openai/codex version)
 
           pi_versions=""
-          for p in pi-ai pi-agent-core pi-coding-agent pi-mom pi-tui; do
-            pi_versions="$pi_versions$p@$(npm view "@mariozechner/$p" version) "
+          for p in pi-ai pi-coding-agent; do
+            pi_versions="$pi_versions$p@$(npm view "@earendil-works/$p" version) "
           done
 
           {

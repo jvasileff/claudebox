@@ -275,14 +275,24 @@ COPY --chmod=0755                    libexec/claude-statusline.sh   /usr/local/l
 # above the ~/.claude volume, so it is always fresh and can never go stale on an
 # existing volume. Per-volume defaults belong in ~/.claude/settings.json instead.
 #
-# CLAUDE.md here is the managed-policy memory file (the Linux path Claude Code
-# reads org-wide instructions from). It loads ahead of the user and project
-# CLAUDE.md, and claudeMdExcludes cannot suppress it. Same reasoning as the
-# settings above: baked outside the volume, so editing it means rebuilding the
-# image rather than reaching into a running container.
-RUN mkdir -p /etc/claude-code && chmod 755 /etc/claude-code
+# The policy text in etc/agents/AGENTS.md is tool-neutral and feeds both
+# agents, from one source, at two baked paths:
+#
+#   /etc/claude-code/CLAUDE.md  the Linux path Claude Code reads org-wide
+#                               instructions from. It loads ahead of the user
+#                               and project CLAUDE.md, and claudeMdExcludes
+#                               cannot suppress it.
+#   /etc/agents/AGENTS.md       codex reads no instructions file under /etc, so
+#                               container-init points ~/.codex/AGENTS.md (its
+#                               global instructions file) at this one.
+#
+# Same reasoning as the settings above: both are baked outside the volumes, so
+# editing them means rebuilding the image rather than reaching into a running
+# container.
+RUN mkdir -p /etc/claude-code /etc/agents && chmod 755 /etc/claude-code /etc/agents
 COPY --chmod=0644                    etc/claude-code/managed-settings.json  /etc/claude-code/managed-settings.json
-COPY --chmod=0644                    etc/claude-code/CLAUDE.md              /etc/claude-code/CLAUDE.md
+COPY --chmod=0644                    etc/agents/AGENTS.md                   /etc/claude-code/CLAUDE.md
+COPY --chmod=0644                    etc/agents/AGENTS.md                   /etc/agents/AGENTS.md
 RUN su - coder -c "cp -a /etc/skel/.gitconfig ~/.gitconfig \
     && rm -rf ~/.claude && mkdir -p ~/.claude \
     && cp -a /etc/skel/.claude/. ~/.claude/"

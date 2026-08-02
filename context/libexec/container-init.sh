@@ -115,6 +115,26 @@ if [ -f "$JAVA_VERSION_FILE" ]; then
     set -u
 fi
 
+# -- Managed policy for codex ------------------------------------------
+# Claude Code reads /etc/claude-code/CLAUDE.md straight from the image, but
+# codex reads instructions only from $CODEX_HOME/AGENTS.md and from AGENTS.md
+# files inside the repo - it consults nothing under /etc. Link its global
+# instructions file to the baked copy, so the text stays in the image (fresh
+# on every rebuild) and the ~/.codex volume holds only the link.
+POLICY=/etc/agents/AGENTS.md
+CODEX_AGENTS="$HOME/.codex/AGENTS.md"
+if [ -L "$CODEX_AGENTS" ]; then
+    case "$(readlink "$CODEX_AGENTS")" in
+        /etc/*) ln -sfn "$POLICY" "$CODEX_AGENTS" ;;  # ours: repoint, the baked path may have moved
+        *)      log_warn "$CODEX_AGENTS links outside /etc; leaving it alone" ;;
+    esac
+elif [ -e "$CODEX_AGENTS" ]; then
+    log_warn "$CODEX_AGENTS exists and is not a symlink; leaving it alone"
+else
+    mkdir -p "$(dirname "$CODEX_AGENTS")"
+    ln -s "$POLICY" "$CODEX_AGENTS"
+fi
+
 # -- Memory sync symlink (Claude only) ---------------------------------
 # Skip when ~/.claude is not a volume mount (e.g. when running codex)
 if mountpoint -q "$HOME/.claude" 2>/dev/null; then

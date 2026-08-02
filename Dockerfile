@@ -211,6 +211,11 @@ COPY --from=sqlite3_builder /usr/local /usr/local
 RUN ldconfig
 COPY --from=issues_builder /opt/issues/bin/issues /usr/local/bin/issues
 
+# -- Approve the install scripts npm would otherwise skip -------------
+# Copied before the npm installs below so their scripts run at build
+# time, and kept in the image so `npm update -g` honours it at runtime.
+COPY --chown=coder:coder home/dot.npmrc /home/coder/.npmrc
+
 # -- Install https://github.com/badlogic/pi-mono ----------------------
 ARG PI_VERSIONS="pi-ai pi-agent-core pi-coding-agent pi-mom pi-tui"
 RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g $(printf '@mariozechner/%s ' $PI_VERSIONS)"

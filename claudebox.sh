@@ -99,9 +99,15 @@ cbox-sync-auth() {
         ghcr.io/jvasileff/claudebox:sync-auth
 }
 
+# `--disable apps` turns off the ChatGPT app directory, a built-in MCP
+# server this sandbox has no use for. Its app list is fetched from
+# chatgpt.com under a far longer deadline than the TUI's MCP startup
+# round, so the TUI settles first and warns that codex_apps was never
+# initialized. Configuring an MCP server directly is the better route to
+# anything the directory would have offered.
 codexbox() {
     if [[ $# -eq 0 ]]; then
-        set -- bash -c 'echo "Updating..." && npm update -g @openai/codex && exec codex --yolo'
+        set -- bash -c 'echo "Updating..." && npm update -g @openai/codex && exec codex --yolo --disable apps'
     fi
     _claudebox_run codexbox .codex "$@"
 }

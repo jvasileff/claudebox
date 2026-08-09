@@ -2,13 +2,17 @@
 # Source this file from your shell config, e.g.:
 #   source /path/to/claudebox/claudebox.sh
 
-# Container engine: prefer podman, fall back to docker.
+# Container engine: first found, in order of preference.
 _claudebox_engine() {
-    if command -v podman >/dev/null 2>&1; then
-        echo podman
-    else
-        echo docker
-    fi
+    local -a _engines=(podman docker nerdctl.lima nerdctl)
+    for _e in "${_engines[@]}"; do
+        if command -v "$_e" >/dev/null 2>&1; then
+            echo "$_e"
+            return 0
+        fi
+    done
+    echo "claudebox: no container engine found (tried ${_engines[*]})" >&2
+    return 1
 }
 
 # Per-project volume name: prefix + project basename + hash of its real path.
@@ -22,7 +26,7 @@ _claudebox_run() {
     local _prefix=$1 _state_dir=$2; shift 2
     local _real _vol _git_name _git_email _tz _engine
     local -a _env_args=()
-    _engine=$(_claudebox_engine)
+    _engine=$(_claudebox_engine) || return 1
     _real=$(cd -P "$(pwd)" && pwd)
     _vol=$(_claudebox_vol "$_prefix")
     _git_name=$(git config --global user.name 2>/dev/null || true)
@@ -92,7 +96,7 @@ cbox-sync-auth() {
         printf '%s\n' "$_creds"
         return 0
     fi
-    _engine=$(_claudebox_engine)
+    _engine=$(_claudebox_engine) || return 1
     "$_engine" pull --quiet ghcr.io/jvasileff/claudebox:sync-auth 2>/dev/null || true
     printf '%s' "$_creds" | "$_engine" run -i --rm --network=none \
         -v "$(_claudebox_vol claudebox):/home/coder/.claude" \
@@ -117,7 +121,8 @@ codexbox() {
 # the container:
 #   cboxbase -v ~/data:/data -- bash -lc 'echo hi'
 cboxbase() {
-    local _engine; _engine=$(_claudebox_engine)
+    local _engine
+    _engine=$(_claudebox_engine) || return 1
     local -a opts=()
     while [[ $# -gt 0 && $1 != -- ]]; do opts+=("$1"); shift; done
     [[ $1 == -- ]] && shift

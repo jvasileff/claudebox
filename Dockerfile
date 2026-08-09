@@ -1,3 +1,6 @@
+# syntax=docker/dockerfile:1
+# COPY --link (used by the agent stages) needs syntax 1.4+.
+
 # ======================================================================
 # Stage: sqlite3_builder
 # Builds sqlite3 with the compile-time options Debian's package omits.
@@ -195,16 +198,50 @@ ENV LC_ALL=en_US.UTF-8
 ENV UV_SYSTEM_PYTHON=1
 
 # ======================================================================
+# Stage: claude_agent
+# Installs Claude Code, staged under /out for base to COPY --link in.
+# One stage per AI tool: a release of one never rebuilds the others
+# (CI's cache-to mode=max keeps the stages cached). /out carries full
+# paths because --link creates missing parent dirs as root:root.
+# ======================================================================
+FROM toolchain AS claude_agent
+
+# -- Install Claude Code (native installer) ---------------------------
+# The installer accepts stable|latest|X.Y.Z as its target argument.
+ARG CLAUDE_VERSION=latest
+RUN su - coder -c "curl -fsSL https://claude.ai/install.sh | bash -s -- ${CLAUDE_VERSION}"
+
+# -- Strip build-time identity from the installer's ~/.claude.json ----
+# The native installer records installMethod/autoUpdates here (which
+# `claude update` relies on), but also bakes a machineID/userID/
+# firstStartTime generated at build time. Those are per-machine
+# identifiers that must not be shared across every container spawned
+# from the image, so drop them; claude regenerates fresh ones on first
+# run. (Same clean-slate reasoning as the ~/.claude wipe in base.)
+RUN su - coder -c 'if [ -f ~/.claude.json ]; then \
+        jq "del(.machineID, .userID, .firstStartTime)" ~/.claude.json | sponge ~/.claude.json; \
+    fi'
+
+# -- Stage the installed files ----------------------------------------
+# ~/.claude is omitted on purpose (base rebuilds it from /etc/skel);
+# the existence test tolerates paths future installers may drop.
+RUN set -eu; \
+    mkdir -p /out; \
+    for p in /home/coder/.local/share/claude \
+             /home/coder/.local/state/claude \
+             /home/coder/.local/bin/claude \
+             /home/coder/.claude.json; do \
+        if [ -e "$p" ] || [ -L "$p" ]; then cp -a --parents "$p" /out/; fi; \
+    done
+
+# ======================================================================
 # Stage: base
 # Adds AI coding tools and daily OS security patches. Published as
 # ghcr.io/.../claudebox:base — fully usable, without the sandbox setup.
 #
-# Tool version ARGs: the defaults install the latest release, so a
-# standalone `docker build` needs no arguments. CI passes exact resolved
-# versions so that unchanged tools are cache hits (identical layers,
-# nothing to re-pull nightly). Tools are installed least-frequently to
-# most-frequently released, so frequent releases (claude, near-daily)
-# don't invalidate the larger, rarely-changing layers above them.
+# Version ARGs default to latest; CI passes exact versions so unchanged
+# tools stay cache hits. Claude Code comes prebuilt from its own stage;
+# codex and pi still install here.
 # ======================================================================
 FROM toolchain AS base
 
@@ -230,23 +267,10 @@ RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g $(printf '@earendil-works/%s ' $P
 ARG CODEX_VERSION=latest
 RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g @openai/codex@${CODEX_VERSION}"
 
-# -- Install Claude Code (native installer) ---------------------------
-# The installer accepts stable|latest|X.Y.Z as its target argument.
-ARG CLAUDE_VERSION=latest
-RUN su - coder -c "curl -fsSL https://claude.ai/install.sh | bash -s -- ${CLAUDE_VERSION}"
+# -- Install Claude Code (built in the claude_agent stage) ------------
+COPY --link --from=claude_agent /out/ /
 
 ENV CLAUDE_CONFIG_DIR=/home/coder/.claude
-
-# -- Strip build-time identity from the installer's ~/.claude.json ----
-# The native installer records installMethod/autoUpdates here (which
-# `claude update` relies on), but also bakes a machineID/userID/
-# firstStartTime generated at build time. Those are per-machine
-# identifiers that must not be shared across every container spawned
-# from the image, so drop them; claude regenerates fresh ones on first
-# run. (Same clean-slate reasoning as the ~/.claude wipe below.)
-RUN su - coder -c 'if [ -f ~/.claude.json ]; then \
-        jq "del(.machineID, .userID, .firstStartTime)" ~/.claude.json | sponge ~/.claude.json; \
-    fi'
 
 # -- Default config templates -----------------------------------------
 # Canonical defaults live in /etc/skel (inherited by the sandbox stage,
@@ -258,8 +282,8 @@ RUN su - coder -c 'if [ -f ~/.claude.json ]; then \
 # preserves modes.
 #
 # ~/.claude is wiped before baking so its config comes solely from
-# /etc/skel — the same clean slate the sandbox gets — rather than our
-# config merged over the Claude installer's default artifacts. Safe
+# /etc/skel — the same clean slate the sandbox gets. (claude_agent
+# ships no ~/.claude; the wipe guards against future artifacts.) Safe
 # because the claude launcher lives in ~/.local/bin, not ~/.claude.
 # dot.claude.claude.json seeds ~/.claude/.claude.json with
 # hasCompletedOnboarding (suppresses the first-run theme/onboarding

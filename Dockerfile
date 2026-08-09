@@ -153,6 +153,8 @@ RUN su - coder -c "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | s
 # configure nix for single-user use
 RUN echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
 RUN echo "build-users-group =" >> /etc/nix/nix.conf
+# nix can't sandbox in this container; it silently builds unsandboxed anyway
+RUN echo "sandbox = false" >> /etc/nix/nix.conf
 RUN chown -R coder:coder /nix
 
 # -- Shell environment (nvm, sdkman) for all shell types --------------

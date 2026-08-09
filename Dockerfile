@@ -235,13 +235,37 @@ RUN set -eu; \
     done
 
 # ======================================================================
+# Stage: codex_agent
+# Installs the OpenAI Codex CLI. Same pattern as claude_agent. Codex
+# must stay at npm's standard global prefix, or `codex update` refuses
+# to run. npm's ~200M download cache (~/.npm) is not staged.
+# ======================================================================
+FROM toolchain AS codex_agent
+
+# -- Approve the install scripts npm would otherwise skip -------------
+COPY --chown=coder:coder home/dot.npmrc /home/coder/.npmrc
+
+ARG CODEX_VERSION=latest
+RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g @openai/codex@${CODEX_VERSION}"
+
+# -- Stage the installed files ----------------------------------------
+# The prefix embeds the node version, so ask npm for it; tail -1 drops
+# login-shell noise.
+RUN prefix="$(su - coder -c '. ~/.nvm/nvm.sh && npm prefix -g' | tail -1)" \
+    && mkdir -p /out \
+    && cp -a --parents \
+        "$prefix/lib/node_modules/@openai" \
+        "$prefix/bin/codex" \
+        /out/
+
+# ======================================================================
 # Stage: base
 # Adds AI coding tools and daily OS security patches. Published as
 # ghcr.io/.../claudebox:base — fully usable, without the sandbox setup.
 #
 # Version ARGs default to latest; CI passes exact versions so unchanged
-# tools stay cache hits. Claude Code comes prebuilt from its own stage;
-# codex and pi still install here.
+# tools stay cache hits. Claude Code and Codex come prebuilt from their
+# stages; pi still installs here.
 # ======================================================================
 FROM toolchain AS base
 
@@ -263,12 +287,9 @@ COPY --chown=coder:coder home/dot.npmrc /home/coder/.npmrc
 ARG PI_VERSIONS="pi-ai pi-coding-agent"
 RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g $(printf '@earendil-works/%s ' $PI_VERSIONS)"
 
-# -- Install OpenAI Codex CLI ------------------------------------------
-ARG CODEX_VERSION=latest
-RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g @openai/codex@${CODEX_VERSION}"
-
-# -- Install Claude Code (built in the claude_agent stage) ------------
+# -- Install the agents built above -----------------------------------
 COPY --link --from=claude_agent /out/ /
+COPY --link --from=codex_agent  /out/ /
 
 ENV CLAUDE_CONFIG_DIR=/home/coder/.claude
 

@@ -80,8 +80,35 @@ Don't stage files on your own initiative. Use `git add`, or anything else
 that changes the index, only on an explicit request or as part of a workflow
 already established in the conversation. Staged changes may be a deliberate
 checkpoint, separating work already reviewed from work that isn't, and
-staging on top of that erases the distinction. This is about the index alone
-and says nothing about commits.
+staging on top of that erases the distinction. This is about the index alone;
+committing is the next section.
+
+One exception. A file you have just created is invisible to `git diff`, which
+is where the human reads your work, so `git add -N` (`--intent-to-add`) is
+allowed for new files belonging to the change: it records the path without
+its contents, so the file appears in the unstaged diff while
+`git diff --cached` still shows only what the human staged. Say that you did
+it, and stop there - `git rm --cached <file>` returns the path to untracked.
+Note what an intent-to-add entry costs: `git stash` refuses to run while one
+exists, and `git restore` empties the file rather than leaving it alone.
+
+## Commits
+
+Commit when the human asks for a commit, not when the work looks finished or
+the session looks like it is ending.
+
+A request to stage or commit is spent when you carry it out. "Commit" commits
+the change under discussion and authorizes nothing after it; the next change
+needs its own request. Committing as you go is a workflow the human opts into
+in those terms, and one earlier request, however recent, does not establish
+it - neither does a series of them, and neither does describing the commit as
+you make it, which is narration rather than consent.
+
+What this protects is the human's own review loop. Reading changed code
+against the index and the last commit is a normal way to work, and a commit
+nobody asked for moves both of those reference points. Asking costs one short
+exchange; an unrequested commit costs an audit of the history. When in doubt,
+finish the work, leave it uncommitted, and say what you would have committed.
 
 ## Git branches
 

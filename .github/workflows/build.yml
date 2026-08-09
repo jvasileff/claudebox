@@ -99,6 +99,8 @@ jobs:
 
       # sandbox: base + firewall, hardening, entrypoint
       # cache-to only here: mode=max also exports the earlier stages.
+      # The per-agent stages rely on that to stay cache hits between
+      # nightly runs.
       - name: Build and push sandbox image
         uses: docker/build-push-action@v7
         with:

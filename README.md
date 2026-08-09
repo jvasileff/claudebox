@@ -30,7 +30,8 @@ Three images are published to ghcr.io nightly:
 
 The Dockerfile builds four stages, alongside two builder stages that
 compile sqlite3 and [`issues`](https://github.com/jvasileff/issues) from
-source and contribute only their binaries:
+source and contribute only their binaries, and three agent stages that
+each install one AI CLI and contribute only its files:
 
 | Stage | Adds | Published as |
 |-------|------|--------------|
@@ -46,6 +47,11 @@ changed. Resolving to a concrete version is what busts the tool layers —
 passing a channel name would leave the RUN text unchanged and the cached
 layer would never rebuild. Local builds need no build args — the version
 ARGs default to latest.
+
+Because each AI CLI installs in its own build stage, a release of one
+re-pushes only that tool's layer (~300M), not all three (~850M). This
+depends on CI keeping `cache-to ... mode=max`, which preserves the
+agent stages between runs.
 
 ## Usage
 

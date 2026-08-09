@@ -259,13 +259,41 @@ RUN prefix="$(su - coder -c '. ~/.nvm/nvm.sh && npm prefix -g' | tail -1)" \
         /out/
 
 # ======================================================================
+# Stage: pi_agent
+# Installs https://github.com/earendil-works/pi. Same pattern as the
+# stages above; pi and codex share the npm prefix but own disjoint
+# scopes, so their copies cannot conflict.
+# ======================================================================
+FROM toolchain AS pi_agent
+
+# -- Approve the install scripts npm would otherwise skip -------------
+# (The packages it lists are pi dependencies.)
+COPY --chown=coder:coder home/dot.npmrc /home/coder/.npmrc
+
+# Only these two carry a bin: pi-coding-agent provides `pi` and pi-ai
+# provides `pi-ai`. pi-agent-core and pi-tui are libraries and arrive as
+# dependencies of pi-coding-agent, so listing them here would add
+# nothing.
+ARG PI_VERSIONS="pi-ai pi-coding-agent"
+RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g $(printf '@earendil-works/%s ' $PI_VERSIONS)"
+
+# -- Stage the installed files ----------------------------------------
+RUN prefix="$(su - coder -c '. ~/.nvm/nvm.sh && npm prefix -g' | tail -1)" \
+    && mkdir -p /out \
+    && cp -a --parents \
+        "$prefix/lib/node_modules/@earendil-works" \
+        "$prefix/bin/pi" \
+        "$prefix/bin/pi-ai" \
+        /out/
+
+# ======================================================================
 # Stage: base
 # Adds AI coding tools and daily OS security patches. Published as
 # ghcr.io/.../claudebox:base — fully usable, without the sandbox setup.
 #
-# Version ARGs default to latest; CI passes exact versions so unchanged
-# tools stay cache hits. Claude Code and Codex come prebuilt from their
-# stages; pi still installs here.
+# The AI tools come prebuilt from the agent stages above. Version ARGs
+# live there, defaulting to latest; CI passes exact versions so
+# unchanged tools stay cache hits.
 # ======================================================================
 FROM toolchain AS base
 
@@ -274,22 +302,13 @@ COPY --from=sqlite3_builder /usr/local /usr/local
 RUN ldconfig
 COPY --from=issues_builder /opt/issues/bin/issues /usr/local/bin/issues
 
-# -- Approve the install scripts npm would otherwise skip -------------
-# Copied before the npm installs below so their scripts run at build
-# time, and kept in the image so `npm update -g` honours it at runtime.
+# -- Keep .npmrc: `npm update -g` honours it at runtime ---------------
 COPY --chown=coder:coder home/dot.npmrc /home/coder/.npmrc
-
-# -- Install https://github.com/earendil-works/pi ---------------------
-# Only these two carry a bin: pi-coding-agent provides `pi` and pi-ai
-# provides `pi-ai`. pi-agent-core and pi-tui are libraries and arrive as
-# dependencies of pi-coding-agent, so listing them here would add
-# nothing.
-ARG PI_VERSIONS="pi-ai pi-coding-agent"
-RUN su - coder -c ". ~/.nvm/nvm.sh && npm i -g $(printf '@earendil-works/%s ' $PI_VERSIONS)"
 
 # -- Install the agents built above -----------------------------------
 COPY --link --from=claude_agent /out/ /
 COPY --link --from=codex_agent  /out/ /
+COPY --link --from=pi_agent     /out/ /
 
 ENV CLAUDE_CONFIG_DIR=/home/coder/.claude
 
@@ -345,8 +364,7 @@ RUN su - coder -c "cp -a /etc/skel/.gitconfig ~/.gitconfig \
     && cp -a /etc/skel/.claude/. ~/.claude/"
 
 # -- Daily OS security patches ----------------------------------------
-# Last among the daily steps: its nightly churn must not invalidate the
-# tool layers above.
+# Kept last: its daily churn must not invalidate the steps above.
 ARG AI_CACHE_BUSTER=2026-07-06
 RUN apt-get update \
     && apt-get upgrade -y \

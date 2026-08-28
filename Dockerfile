@@ -302,7 +302,7 @@ COPY --from=sqlite3_builder /usr/local /usr/local
 RUN ldconfig
 COPY --from=issues_builder /opt/issues/bin/issues /usr/local/bin/issues
 
-# -- Keep .npmrc: `npm update -g` honours it at runtime ---------------
+# -- Keep .npmrc: `npm update -g` honors it at runtime ---------------
 COPY --chown=coder:coder home/dot.npmrc /home/coder/.npmrc
 
 # -- Install the agents built above -----------------------------------
@@ -400,7 +400,7 @@ USER root
 # point's image content in, and a volume created by this image must
 # receive only the credentials file — seeding the defaults stays the job
 # of container-init on the project's first real run. Pre-create as
-# coder:coder so the engine honours ownership for new volumes.
+# coder:coder so the engine honors ownership for new volumes.
 RUN rm -rf /home/coder/.claude \
     && mkdir -p /home/coder/.claude \
     && chown coder:coder /home/coder/.claude
@@ -425,7 +425,7 @@ FROM base AS sandbox
 USER root
 
 # -- Volume mount points -----------------------------------------------
-# Pre-create as coder:coder so Docker honours ownership for new volumes.
+# Pre-create as coder:coder so Docker honors ownership for new volumes.
 # Clear the baked ~/.claude (installer artifacts + baked defaults); only
 # volume data belongs here, and container-init re-seeds the defaults from
 # /etc/skel at runtime. Drop the baked ~/.gitconfig too, so the runtime

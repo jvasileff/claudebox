@@ -11,6 +11,12 @@ Defaults    secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin
 # (#1011624, https://bugs.kde.org/show_bug.cgi?id=452532)
 Defaults    use_pty
 
+# The firewall's allow-list arrives from the container engine as an
+# environment variable. init-firewall.sh honors it only on its first run,
+# so passing it through does not let coder re-run the script with a list
+# of its own.
+Defaults    env_keep += "FIREWALL_ALLOWED_DEST"
+
 # Cmnd alias specification
 Cmnd_Alias FIREWALL = /usr/local/libexec/init-firewall.sh
 

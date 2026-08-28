@@ -83,7 +83,8 @@ Each tool gets its own isolated volume — `cbox` mounts `~/.claude` and
 The functions read `user.name` and `user.email` from your host git config and pass
 them into the container as `GIT_AUTHOR_NAME`, `GIT_COMMITTER_NAME`, etc. Only name
 and email are passed — no credentials, signing keys, or helpers. The host timezone
-is also passed via `TZ`.
+is also passed via `TZ`, and `FIREWALL_ALLOWED_DEST` is forwarded when set (see
+[Security model](#security-model)).
 
 The volume name is derived from the project's basename and a hash of its real path
 (symlinks resolved), e.g. `claude-myproject-a3f2b1c4`. Each project gets its own
@@ -221,12 +222,24 @@ development impractical.
    IPv6 is blocked, and the image configures `/etc/gai.conf` to prefer IPv4
    address selection so clients do not try unreachable AAAA records first.
 
-   To allow one private destination through (e.g. a local Ollama server),
-   set `FIREWALL_ALLOWED_DEST=hostname_or_ip:port` in the container's
-   environment. The hostname is resolved at firewall setup and a single
-   ACCEPT rule is added before the private-IP block. This is an explicit,
-   user-opted hole in the firewall — anything reachable at that host:port
-   is reachable from inside the sandbox.
+   To allow private destinations through (e.g. a local Ollama server), set
+   `FIREWALL_ALLOWED_DEST` to a list of `host:port` entries, separated by
+   commas or spaces. `cbox` and `codexbox` forward it from your shell:
+
+   ```bash
+   FIREWALL_ALLOWED_DEST="ollama-box:11434, 192.168.1.20:5432" cbox
+   ```
+
+   Each host is resolved (IPv4 only) at firewall setup and a TCP ACCEPT
+   rule per address is added before the private-IP block. A malformed or
+   unresolvable entry aborts startup rather than silently running without
+   the hole. These are explicit, user-opted holes — anything reachable at
+   those host:ports is reachable from inside the sandbox.
+
+   The list is fixed at container start: `init-firewall.sh` saves it to a
+   root-only file on its first run and ignores the environment thereafter,
+   so a process inside the sandbox cannot re-run the script (which sudo
+   permits) with a list of its own.
 
 2. **Privilege isolation** (build time + runtime): all SUID/SGID bits stripped
    except sudo; sudo is configured to allow only `/usr/local/libexec/init-firewall.sh`

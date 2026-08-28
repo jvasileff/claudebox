@@ -35,6 +35,9 @@ _claudebox_run() {
     [[ -n "$_git_name" ]]  && _env_args+=(-e "GIT_AUTHOR_NAME=$_git_name"  -e "GIT_COMMITTER_NAME=$_git_name")
     [[ -n "$_git_email" ]] && _env_args+=(-e "GIT_AUTHOR_EMAIL=$_git_email" -e "GIT_COMMITTER_EMAIL=$_git_email")
     [[ -n "$_tz" ]]        && _env_args+=(-e "TZ=$_tz")
+    # Firewall holes (HOST:PORT list, comma or space separated) — see README.
+    [[ -n "${FIREWALL_ALLOWED_DEST:-}" ]] \
+        && _env_args+=(-e "FIREWALL_ALLOWED_DEST=$FIREWALL_ALLOWED_DEST")
     echo "Pulling latest image..." >&2
     "$_engine" pull --quiet ghcr.io/jvasileff/claudebox:latest 2>/dev/null || true
     "$_engine" run -it --rm \

@@ -1,6 +1,7 @@
 {
   "autoUpdatesChannel": "latest",
   "autoUploadSessions": false,
+  "remoteControlAtStartup": false,
   "statusLine": {
     "type": "command",
     "command": "/usr/local/libexec/claude-statusline.sh"

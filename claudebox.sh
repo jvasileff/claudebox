@@ -25,8 +25,15 @@ _claudebox_vol() {
 _claudebox_run() {
     local _prefix=$1 _state_dir=$2; shift 2
     local _real _vol _git_name _git_email _tz _engine
-    local -a _env_args=()
+    local -a _env_args=() _userns_args=()
     _engine=$(_claudebox_engine) || return 1
+    # Rootless podman maps the host user to container root, so the bind
+    # mount shows up root-owned and coder (uid 1000) can't write it. Map
+    # the host user to coder instead. Docker passes host uids through
+    # unchanged, and podman machine on macOS does its own mapping.
+    if [[ $_engine == podman && $(uname -s) == Linux ]]; then
+        _userns_args+=(--userns=keep-id:uid=1000,gid=1000)
+    fi
     _real=$(cd -P "$(pwd)" && pwd)
     _vol=$(_claudebox_vol "$_prefix")
     _git_name=$(git config --global user.name 2>/dev/null || true)
@@ -49,6 +56,7 @@ _claudebox_run() {
         --cap-add=SETGID \
         --cap-add=AUDIT_WRITE \
         "${_env_args[@]}" \
+        "${_userns_args[@]}" \
         -v "$_vol:/home/coder/$_state_dir" \
         -v "$_real:/workspaces/project" \
         ghcr.io/jvasileff/claudebox:latest "$@"

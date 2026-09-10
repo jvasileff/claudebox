@@ -44,6 +44,7 @@ fi
 #
 # Exception: in a dev container, VS Code injects its own .gitconfig (host
 # credentials, signing config, etc), so never install our default there.
+seeded_settings=
 while IFS= read -r -d '' src; do
     rel=${src#/etc/skel/}
     dest="$HOME/$rel"
@@ -53,6 +54,7 @@ while IFS= read -r -d '' src; do
     [ -e "$dest" ] && continue
     mkdir -p "$(dirname "$dest")"
     cp -a "$src" "$dest"
+    [ "$rel" = ".claude/settings.json" ] && seeded_settings=1
 done < <(find /etc/skel -type f -print0)
 
 # -- Reconcile settings.json with updated skel defaults ---------------
@@ -77,6 +79,14 @@ def m3($b; $n; $c):
     end);
 m3(($b[0] // {}); ($n[0] // {}); ($c[0] // {}))
 '
+# A settings.json the seed loop just copied is already the current defaults,
+# so record that as the baseline and there is nothing to merge. Without this
+# the merge would run against an empty baseline on every start of a container
+# whose ~/.claude is not a volume (codexbox mounts only ~/.codex) and report
+# a reconcile that changed nothing.
+if [ -n "$seeded_settings" ] && [ ! -f "$BASELINE" ]; then
+    cp "$SKEL_SETTINGS" "$BASELINE"
+fi
 if [ -f "$SKEL_SETTINGS" ] && [ -f "$LIVE_SETTINGS" ]; then
     base_tmp=$(mktemp "$HOME/.claude/.settings-base.XXXXXX")
     if [ -f "$BASELINE" ]; then

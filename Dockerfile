@@ -85,6 +85,7 @@ ARG CACHE_BUSTER=2026-07
 # ripgrep bubblewrap socat: required for claude code sandbox
 # build-essential:    make, g++, headers for building native deps
 # git-delta:          nicer git diff output (delta)
+# tini:               PID 1 for the sandbox stage (reaps orphaned processes)
 # moreutils:          sponge, ts, and other pipe utilities
 RUN apt-get update \
     && apt-get upgrade -y \
@@ -98,7 +99,7 @@ RUN apt-get update \
         tzdata locales \
         libreadline8t64 \
         bubblewrap socat \
-        nix shellcheck \
+        nix shellcheck tini \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen \
@@ -471,5 +472,7 @@ RUN printf 'precedence ::ffff:0:0/96  100\n' >> /etc/gai.conf
 
 USER coder
 
-ENTRYPOINT ["/usr/local/libexec/entrypoint.sh"]
+# Use tini as PID 1 to reap orphans. If node (claude) were PID 1, then
+# orphans would stay zombies until the pids limit is hit and fork fails.
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/libexec/entrypoint.sh"]
 CMD ["/bin/bash"]

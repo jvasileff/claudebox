@@ -36,11 +36,14 @@ else
 fi
 
 # -- Seed default config from /etc/skel -------------------------------
-# Copy any missing skel file into $HOME, preserving modes (so the
-# statusline script keeps its exec bit). This is volume-agnostic: it
-# does not need to know which paths are volume mounts — whatever a fresh
-# mount leaves empty gets seeded, while existing files are left untouched
-# so user edits are never overwritten.
+# Copy any missing skel file into $HOME, preserving modes (so a skel
+# file that needs an exec bit keeps it). Use cp -p, never cp -a: -a also
+# copies this container's private SELinux label into the volume, and
+# the next container is denied access to the file.
+#
+# This is volume-agnostic: it does not need to know which paths are
+# volume mounts — whatever a fresh mount leaves empty gets seeded, while
+# existing files are left untouched so user edits are never overwritten.
 #
 # Exception: in a dev container, VS Code injects its own .gitconfig (host
 # credentials, signing config, etc), so never install our default there.
@@ -53,7 +56,7 @@ while IFS= read -r -d '' src; do
     fi
     [ -e "$dest" ] && continue
     mkdir -p "$(dirname "$dest")"
-    cp -a "$src" "$dest"
+    cp -p "$src" "$dest"
     [ "$rel" = ".claude/settings.json" ] && seeded_settings=1
 done < <(find /etc/skel -type f -print0)
 

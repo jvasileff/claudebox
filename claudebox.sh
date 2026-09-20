@@ -47,6 +47,10 @@ _claudebox_run() {
         && _env_args+=(-e "FIREWALL_ALLOWED_DEST=$FIREWALL_ALLOWED_DEST")
     echo "Pulling latest image..." >&2
     "$_engine" pull --quiet ghcr.io/jvasileff/claudebox:latest 2>/dev/null || true
+    # :z on the state volume: on an SELinux host the engine resets every
+    # file in it to the shared label at start. A file copied in with a
+    # container's private label (cp -a, mv from /tmp) is unreadable to
+    # the next container otherwise.
     "$_engine" run -it --rm \
         --name "$_vol" \
         --cap-drop=ALL \
@@ -57,7 +61,7 @@ _claudebox_run() {
         --cap-add=AUDIT_WRITE \
         "${_env_args[@]}" \
         "${_userns_args[@]}" \
-        -v "$_vol:/home/coder/$_state_dir" \
+        -v "$_vol:/home/coder/$_state_dir:z" \
         -v "$_real:/workspaces/project" \
         ghcr.io/jvasileff/claudebox:latest "$@"
 }
@@ -110,7 +114,7 @@ cbox-sync-auth() {
     _engine=$(_claudebox_engine) || return 1
     "$_engine" pull --quiet ghcr.io/jvasileff/claudebox:sync-auth 2>/dev/null || true
     printf '%s' "$_creds" | "$_engine" run -i --rm --network=none \
-        -v "$(_claudebox_vol claudebox):/home/coder/.claude" \
+        -v "$(_claudebox_vol claudebox):/home/coder/.claude:z" \
         ghcr.io/jvasileff/claudebox:sync-auth
 }
 

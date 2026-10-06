@@ -129,7 +129,11 @@ RUN su - coder -c ". ~/.sdkman/bin/sdkman-init.sh && \
     sdk install maven && \
     sdk install jextract && \
     sdk install jbang && \
-    sdk install ant && \
+    (attempt=1; until sdk install ant; do \
+        [ \"\$attempt\" -ge 3 ] && exit 1; \
+        sleep \"\$((attempt * 10))\"; \
+        attempt=\$((attempt + 1)); \
+    done) && \
     sdk flush"
 
 # -- Install uv (Python package/version manager) ----------------------

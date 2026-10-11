@@ -109,6 +109,9 @@ RUN apt-get update \
 RUN groupadd -g 1000 coder \
     && useradd -m -u 1000 -g coder -s /bin/bash coder
 
+# Provide a default shell for Claude to use, so it doesn't pick zsh
+ENV SHELL=/bin/bash
+
 # -- Install nvm (Node version manager, for project use) --------------
 RUN su - coder -c "curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | PROFILE=/dev/null bash"
 

@@ -87,6 +87,14 @@ ARG CACHE_BUSTER=2026-07
 # git-delta:          nicer git diff output (delta)
 # tini:               PID 1 for the sandbox stage (reaps orphaned processes)
 # moreutils:          sponge, ts, and other pipe utilities
+# cmake, ninja-build:  CMake and Ninja build tools
+# pkgconf:            pkg-config, used by CMake find_package lookups
+# gdb, ccache:        native debugger and compiler cache
+# Packages that are recommended, but not included due to --no-install-recommends:
+# psmisc:             killall, pstree, fuser (recommended by procps)
+# xxd:                hex dumps (recommended by vim)
+# fakeroot:           build tarballs as a fake root (recommended by dpkg-dev)
+# gpgv, gnupg-utils:  signature verification and gpg helpers (recommended by gnupg)
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
@@ -96,6 +104,8 @@ RUN apt-get update \
         openssh-client iputils-ping rsync file wget \
         ripgrep fd-find bat tree just bc gawk \
         build-essential git-delta moreutils \
+        cmake ninja-build pkgconf gdb ccache \
+        psmisc xxd fakeroot gpgv gnupg-utils \
         tzdata locales \
         libreadline8t64 \
         bubblewrap socat \

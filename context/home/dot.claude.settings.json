@@ -1,6 +1,7 @@
 {
   "autoUpdatesChannel": "latest",
   "autoUploadSessions": false,
+  "idleCompaction": false,
   "remoteControlAtStartup": false,
   "statusLine": {
     "type": "command",

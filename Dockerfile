@@ -325,6 +325,9 @@ COPY --link --from=codex_agent  /out/ /
 COPY --link --from=pi_agent     /out/ /
 
 ENV CLAUDE_CONFIG_DIR=/home/coder/.claude
+# Also set in managed-settings.json env, but baked here too so it is in the
+# process environment from startup, ahead of any settings load.
+ENV CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1
 
 # -- Default config templates -----------------------------------------
 # Canonical defaults live in /etc/skel (inherited by the sandbox stage,
